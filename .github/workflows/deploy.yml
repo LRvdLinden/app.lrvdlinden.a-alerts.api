@@ -1,0 +1,66 @@
+name: API-gateway (api.a-alerts.nl)
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", "test/**", "tools/**", ".github/workflows/deploy.yml"]
+  workflow_dispatch:
+concurrency: { group: deploy, cancel-in-progress: false }
+permissions: { contents: read }
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testen (gateway tegen een nagemaakte API)
+        run: bash test/run.sh
+  deploy:
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Secrets controleren
+        id: check
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME || secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          missing=""
+          for k in FTP_SERVER FTP_USERNAME FTP_PASSWORD; do [ -n "${!k:-}" ] || missing="$missing $k"; done
+          if [ -n "$missing" ]; then echo "::warning::Secrets ontbreken:$missing. Niets geüpload."; echo "skip=1" >> "$GITHUB_OUTPUT"; fi
+      - name: lftp installeren
+        if: steps.check.outputs.skip != '1'
+        run: (sudo apt-get update -qq && sudo apt-get install -y -qq lftp) >/dev/null 2>&1 || { echo "lftp via apt mislukt, nu via Homebrew"; B=/home/linuxbrew/.linuxbrew/bin/brew; [ -x "$B" ] && HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 "$B" install lftp >/dev/null 2>&1 && echo "$($B --prefix)/bin" >> "$GITHUB_PATH" && export PATH="$($B --prefix)/bin:$PATH"; }; command -v lftp >/dev/null
+      - name: Uploaden via FTPS
+        if: steps.check.outputs.skip != '1'
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME || secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_DIR: ${{ secrets.FTP_DIR }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+        run: |
+          set -euo pipefail
+          source tools/ftps.sh
+          ftps_connect
+          T="$FTPS_TARGET"
+          [ "$T" != "." ] && { ftps_run "mkdir -p -f \"$T\"" >/dev/null 2>&1 || true; }
+          # Safety: never upload into the folder of the website a-alerts.nl (that would replace its .htaccess and index).
+          ftps_try "cd \"$T\"; cls -1" > "$FTPS_TMP/doel.txt" 2>/dev/null || true
+          if grep -qxE '(pager|meldkamer|nieuws|assets|widget)/?' "$FTPS_TMP/doel.txt"; then
+            rm -f "$FTPS_TMP/doel.txt"
+            echo "::error::De doelmap is de map van de website a-alerts.nl, niet die van api.a-alerts.nl. Niets geüpload. Zet het secret FTP_DIR op de map van het subdomein api.a-alerts.nl."
+            exit 1
+          fi
+          rm -f "$FTPS_TMP/doel.txt"
+          ftps_run "mirror -R --parallel=2 --exclude-glob .DS_Store ./web/ \"$T\"" >/dev/null 2>&1 \
+            || { echo "::error::Uploaden naar de FTP-server mislukt."; exit 1; }
+          echo "::notice::Gateway geüpload."
+      - name: Controleren of api.a-alerts.nl antwoordt
+        if: steps.check.outputs.skip != '1' && success()
+        run: |
+          sleep 5
+          g=$(curl -s --max-time 20 https://api.a-alerts.nl/_gateway || true)
+          case "$g" in *'"gateway":"a-alerts"'*) echo "::notice::api.a-alerts.nl/_gateway antwoordt: $g";; *) echo "::warning::api.a-alerts.nl/_gateway antwoordt (nog) niet. Bestaat het subdomein en wijst het naar de map waarin is geüpload?";; esac
+          c=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 https://api.a-alerts.nl/v1/status || true)
+          echo "::notice::api.a-alerts.nl/v1/status: HTTP $c"
