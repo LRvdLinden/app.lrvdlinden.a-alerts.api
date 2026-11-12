@@ -10,11 +10,15 @@ W = (sys.argv[2] if len(sys.argv) > 2 else "https://p2000-apeldoorn-api.lrvdlind
 NEGEER = {"date", "server", "cf-ray", "cf-cache-status", "report-to", "nel", "alt-svc", "server-timing", "content-length",
           "content-encoding", "transfer-encoding", "connection", "keep-alive", "age", "x-powered-by", "upgrade", "priority"}
 s = requests.Session()
+s.headers["Accept-Encoding"] = "gzip"
 tijden = {"G": [], "W": []}
 
 def vraag(basis, methode, pad, headers=None, body=None):
     t = time.time()
-    r = s.request(methode, basis + pad, headers=headers or {}, data=body, timeout=45, allow_redirects=False)
+    try:
+        r = s.request(methode, basis + pad, headers=headers or {}, data=body, timeout=45, allow_redirects=False)
+    except Exception as e:
+        return -1, {}, f"{'gateway' if basis == G else 'api'} {methode} {pad}: {type(e).__name__}: {e}".encode()
     tijden["G" if basis == G else "W"].append(time.time() - t)
     h = {k.lower(): v for k, v in r.headers.items() if k.lower() not in NEGEER}
     return r.status_code, h, r.content
@@ -52,6 +56,22 @@ def test(naam, methode, pad, headers=None, body=None, wisselend=False):
         except Exception: pass
     fouten += 1
     regels.append(("VERSCHIL", naam, f"status gateway={g[0]} api={w[0]}; lengte gateway={len(g[2])} api={len(w[2])}; begin gateway={g[2][:120]!r} api={w[2][:120]!r}"))
+
+# Compression: every variant a browser or app can ask for must arrive complete and identical after unpacking.
+import subprocess
+def curl(basis, pad, enc):
+    r = subprocess.run(["curl", "-s", "--max-time", "40", "-H", f"Accept-Encoding: {enc}", "-H", "Origin: https://a-alerts.nl", "--compressed" if enc != "identity" else "-N",
+                        "-w", "\n%{http_code} %{size_download}", "-D", "/tmp/h.txt", basis + pad], capture_output=True)
+    kop = open("/tmp/h.txt", errors="replace").read().lower()
+    ce = next((l.split(":", 1)[1].strip() for l in kop.splitlines() if l.startswith("content-encoding:")), "-")
+    lijf, _, staart = r.stdout.rpartition(b"\n")
+    return r.returncode, staart.decode(), ce, lijf
+for enc in ("identity", "gzip", "br", "zstd", "gzip, deflate, br, zstd"):
+    for pad in ("/v1/changelog", "/v1/meldingen?limit=500", "/v1/content/privacy"):
+        g, w = curl(G, pad, enc), curl(W, pad, enc)
+        gelijk = g[0] == 0 and w[0] == 0 and g[3] == w[3]
+        if not gelijk: fouten += 1
+        regels.append(("GELIJK" if gelijk else "VERSCHIL", f"Compressie {enc} {pad}", f"gateway: curl={g[0]} {g[1]} enc={g[2]} uitgepakt={len(g[3])}; api: curl={w[0]} {w[1]} enc={w[2]} uitgepakt={len(w[3])}"))
 
 O = {"Origin": "https://a-alerts.nl"}
 # ids for the detail pages
