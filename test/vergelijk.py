@@ -28,9 +28,12 @@ def vorm(x):
     if isinstance(x, list): return [vorm(x[0])] if x else []
     return type(x).__name__ if x is not None else "null"
 
+import os
+ALLEEN = os.environ.get("ALLEEN", "")
 fouten, regels = 0, []
 def test(naam, methode, pad, headers=None, body=None, wisselend=False):
     global fouten
+    if ALLEEN and ALLEEN.lower() not in naam.lower(): return
     laatste = None
     for poging in range(5):
         w1 = vraag(W, methode, pad, headers, body); g = vraag(G, methode, pad, headers, body); w2 = vraag(W, methode, pad, headers, body)
@@ -62,7 +65,9 @@ def test(naam, methode, pad, headers=None, body=None, wisselend=False):
             if jg and jg == jw and len(g[2]) == len(w[2]):
                 hv = {k for k in set(g[1]) | set(w[1]) if g[1].get(k) != w[1].get(k)}
                 if not hv: regels.append(("GELIJK*", naam, f"{g[0]}, token met alleen een ander tijdstip; verder gelijk")); return
-        except Exception: pass
+            if ALLEEN: print("R DEBUG tokens", len(jg), len(jw), [sorted(x[1]) for x in jg], [k for a, b in zip(jg, jw) for k in set(a[1]) | set(b[1]) if a[1].get(k) != b[1].get(k)], [a[0] == b[0] for a, b in zip(jg, jw)])
+        except Exception as e:
+            if ALLEEN: print("R DEBUG fout", type(e).__name__, e)
         try:
             if vorm(json.loads(g[2])) == vorm(json.loads(w[2])):
                 hv = {k for k in set(g[1]) | set(w[1]) if g[1].get(k) != w[1].get(k) and k not in ("etag", "last-modified", "x-opgehaald")}
@@ -81,7 +86,7 @@ def curl(basis, pad, enc):
     ce = next((l.split(":", 1)[1].strip() for l in kop.splitlines() if l.startswith("content-encoding:")), "-")
     lijf, _, staart = r.stdout.rpartition(b"\n")
     return r.returncode, staart.decode(), ce, lijf
-for enc in ("identity", "gzip", "br", "zstd", "gzip, deflate, br, zstd"):
+for enc in (() if ALLEEN else ("identity", "gzip", "br", "zstd", "gzip, deflate, br, zstd")):
     for pad in ("/v1/changelog", "/v1/meldingen?limit=500", "/v1/content/privacy"):
         g, w = curl(G, pad, enc), curl(W, pad, enc)
         # the gateway offers gzip (the API also brotli and zstd); asked without compression both answer plain

@@ -1,5 +1,8 @@
 name: Vergelijken (gateway en API)
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      alleen: { description: "Alleen tests met dit woord in de naam", required: false, default: "" }
 permissions: { contents: read }
 jobs:
   vergelijk:
@@ -8,3 +11,5 @@ jobs:
       - uses: actions/checkout@v4
       - run: python3 -c "import requests" 2>/dev/null || pip install -q requests
       - run: python3 test/vergelijk.py
+        env:
+          ALLEEN: ${{ inputs.alleen }}
