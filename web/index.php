@@ -4,6 +4,8 @@
 // Why: networks and ad blockers that block *.workers.dev can reach the API through A-Alerts' own address.
 declare(strict_types=1);
 require __DIR__ . '/config.php';
+// PHP and Apache would add "charset=UTF-8" to text answers; the answer must stay exactly as the real API gives it.
+ini_set('default_charset', '');
 
 $upstream = rtrim(getenv('AALERTS_UPSTREAM') ?: UPSTREAM, '/');
 $uri = $_SERVER['REQUEST_URI'] ?? '/';

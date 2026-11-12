@@ -25,4 +25,5 @@ ok "gzip als de bezoeker dat vraagt" '[[ "$(curl -s -D - -o /dev/null -H "accept
 ok "uitgepakt gelijk aan de API"   '[[ "$(curl -s --compressed "$G/v1/groot" | md5sum)" == "$(curl -s http://127.0.0.1:8911/v1/groot | md5sum)" ]]'
 ok "zonder gzip ongecomprimeerd"   '[[ "$(curl -s -D - -o /dev/null "$G/v1/groot" | tr A-Z a-z)" != *"content-encoding"* ]]'
 ok "HEAD zonder inhoud"            '[[ -z "$(curl -s -I "$G/v1/groot" | sed "1,/^\r\{0,1\}$/d")" ]]'
+ok "content-type ongewijzigd (geen charset erbij)" '[[ "$(curl -s -D - -o /dev/null "$G/v1/tekst" | tr -d "\r" | grep -i "^content-type:" | tr A-Z a-z)" == "content-type: text/plain" ]]'
 exit $fail

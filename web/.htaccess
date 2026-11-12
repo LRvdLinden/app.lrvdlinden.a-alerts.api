@@ -1,5 +1,6 @@
 # A-Alerts API gateway: every request goes to index.php, which passes it on to the real API.
 Options -Indexes
+AddDefaultCharset Off
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteCond %{HTTPS} !=on
