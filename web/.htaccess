@@ -10,8 +10,11 @@ Options -Indexes
   RewriteRule ^config\.php$ - [F,L]
   RewriteRule ^ index.php [L]
 </IfModule>
+# No extra headers: the answer must be the same as that of the real API. PHP compresses the answer itself.
 <IfModule mod_headers.c>
-  Header always set X-Content-Type-Options "nosniff"
-  Header always set Strict-Transport-Security "max-age=31536000"
   Header unset X-Powered-By
+</IfModule>
+<IfModule mod_env.c>
+  SetEnv no-gzip 1
+  SetEnv no-brotli 1
 </IfModule>

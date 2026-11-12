@@ -21,4 +21,8 @@ ok "404 blijft 404"          '[[ "$(curl -s -o /dev/null -w "%{http_code}" "$G/v
 ok "OPTIONS (CORS-preflight)" '[[ "$(curl -s -X OPTIONS "$G/v1/x")" == *"\"method\":\"OPTIONS\""* ]]'
 ok "/_gateway"               '[[ "$(curl -s "$G/_gateway")" == *"\"gateway\":\"a-alerts\""* ]]'
 ok "504 als de API niet op tijd antwoordt" '[[ "$(curl -s -o /dev/null -w "%{http_code}" -m 40 "$G/v1/traag")" == 504 ]]'
+ok "gzip als de bezoeker dat vraagt" '[[ "$(curl -s -D - -o /dev/null -H "accept-encoding: gzip" "$G/v1/groot" | tr A-Z a-z)" == *"content-encoding: gzip"* ]]'
+ok "uitgepakt gelijk aan de API"   '[[ "$(curl -s --compressed "$G/v1/groot" | md5sum)" == "$(curl -s http://127.0.0.1:8911/v1/groot | md5sum)" ]]'
+ok "zonder gzip ongecomprimeerd"   '[[ "$(curl -s -D - -o /dev/null "$G/v1/groot" | tr A-Z a-z)" != *"content-encoding"* ]]'
+ok "HEAD zonder inhoud"            '[[ -z "$(curl -s -I "$G/v1/groot" | sed "1,/^\r\{0,1\}$/d")" ]]'
 exit $fail

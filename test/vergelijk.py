@@ -8,7 +8,7 @@ G = (sys.argv[1] if len(sys.argv) > 1 else "https://api.a-alerts.nl").rstrip("/"
 W = (sys.argv[2] if len(sys.argv) > 2 else "https://p2000-apeldoorn-api.lrvdlinden.workers.dev").rstrip("/")
 # Headers that belong to the connection or to the server in front, not to the answer of the API.
 NEGEER = {"date", "server", "cf-ray", "cf-cache-status", "report-to", "nel", "alt-svc", "server-timing", "content-length",
-          "content-encoding", "transfer-encoding", "connection", "keep-alive", "age", "x-powered-by", "upgrade", "priority"}
+          "content-encoding", "transfer-encoding", "connection", "keep-alive", "age", "x-powered-by", "upgrade", "priority", "vary"}
 s = requests.Session()
 s.headers["Accept-Encoding"] = "gzip"
 tijden = {"G": [], "W": []}
@@ -48,6 +48,21 @@ def test(naam, methode, pad, headers=None, body=None, wisselend=False):
         fouten += 1; regels.append(("VERSCHIL", naam, "headers: " + "; ".join(f"{k}: gateway={a!r} api={b!r}" for k, (a, b) in sorted(d.items())))); return
     g, w = d
     if g[0] == w[0] and wisselend:
+        # Signed tokens (JWT) carry the time they were made: compare everything in them except those times.
+        def jwt(b):
+            import base64, re
+            uit = []
+            for tok in re.findall(rb"[A-Za-z0-9_-]{8,}[.][A-Za-z0-9_-]{8,}[.][A-Za-z0-9_-]{8,}", b):
+                d = lambda x: json.loads(base64.urlsafe_b64decode(x + b"=" * (-len(x) % 4)))
+                kop, lijf = d(tok.split(b".")[0]), d(tok.split(b".")[1])
+                uit.append((kop, {k: v for k, v in lijf.items() if k not in ("iat", "exp", "nbf", "jti")}))
+            return uit
+        try:
+            jg, jw = jwt(g[2]), jwt(w[2])
+            if jg and jg == jw and len(g[2]) == len(w[2]):
+                hv = {k for k in set(g[1]) | set(w[1]) if g[1].get(k) != w[1].get(k)}
+                if not hv: regels.append(("GELIJK*", naam, f"{g[0]}, token met alleen een ander tijdstip; verder gelijk")); return
+        except Exception: pass
         try:
             if vorm(json.loads(g[2])) == vorm(json.loads(w[2])):
                 hv = {k for k in set(g[1]) | set(w[1]) if g[1].get(k) != w[1].get(k) and k not in ("etag", "last-modified", "x-opgehaald")}
@@ -69,7 +84,8 @@ def curl(basis, pad, enc):
 for enc in ("identity", "gzip", "br", "zstd", "gzip, deflate, br, zstd"):
     for pad in ("/v1/changelog", "/v1/meldingen?limit=500", "/v1/content/privacy"):
         g, w = curl(G, pad, enc), curl(W, pad, enc)
-        gelijk = g[0] == 0 and w[0] == 0 and g[3] == w[3]
+        # the gateway offers gzip (the API also brotli and zstd); asked without compression both answer plain
+        gelijk = g[0] == 0 and w[0] == 0 and g[3] == w[3] and (g[2] == "gzip" if "gzip" in enc else g[2] == "-")
         if not gelijk: fouten += 1
         regels.append(("GELIJK" if gelijk else "VERSCHIL", f"Compressie {enc} {pad}", f"gateway: curl={g[0]} {g[1]} enc={g[2]} uitgepakt={len(g[3])}; api: curl={w[0]} {w[1]} enc={w[2]} uitgepakt={len(w[3])}"))
 

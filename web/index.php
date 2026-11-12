@@ -41,6 +41,7 @@ $headers[] = 'Expect:'; // no "100-continue" round trip on uploads
 $ch = curl_init($upstream . $uri);
 $drop = ['transfer-encoding', 'connection', 'keep-alive', 'content-encoding', 'content-length', 'alt-svc', 'server', 'cf-ray', 'cf-cache-status', 'report-to', 'nel', 'server-timing', 'date'];
 $sent = false;
+$body = '';
 curl_setopt_array($ch, [
     CURLOPT_CUSTOMREQUEST => $method,
     CURLOPT_HTTPHEADER => $headers,
@@ -62,10 +63,8 @@ curl_setopt_array($ch, [
         if (!in_array($name, $drop, true)) header($t, false);
         return $len;
     },
-    CURLOPT_WRITEFUNCTION => function ($ch, string $data): int {
-        echo $data;
-        if (ob_get_level() > 0) @ob_flush();
-        flush();
+    CURLOPT_WRITEFUNCTION => function ($ch, string $data) use (&$body): int {
+        $body .= $data;
         return strlen($data);
     },
 ]);
@@ -83,3 +82,19 @@ if ($ok === false && !$sent) {
     echo json_encode(['error' => $timeout ? 'De A-Alerts-server reageert niet op tijd.' : 'De A-Alerts-server is niet bereikbaar.']);
 }
 curl_close($ch);
+if ($ok !== false || $sent) {
+    // Compress text answers for the visitor, like the real API does (JSON of 90 kB becomes 9 kB).
+    $type = '';
+    foreach (headers_list() as $h) if (stripos($h, 'content-type:') === 0) $type = strtolower($h);
+    $tekst = (bool) preg_match('#(json|text/|javascript|xml|svg)#', $type);
+    $wil = stripos($_SERVER['HTTP_ACCEPT_ENCODING'] ?? '', 'gzip') !== false;
+    if ($tekst && $wil && strlen($body) > 256 && function_exists('gzencode')) {
+        $body = gzencode($body, 6);
+        header('Content-Encoding: gzip');
+        header('Vary: Accept-Encoding', false);
+    }
+    if ($method !== 'HEAD') {
+        header('Content-Length: ' . strlen($body));
+        echo $body;
+    }
+}

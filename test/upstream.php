@@ -3,6 +3,7 @@
 $p = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 if ($p === '/v1/etag') { if (($_SERVER['HTTP_IF_NONE_MATCH'] ?? '') === '"abc"') { http_response_code(304); header('etag: "abc"'); exit; } header('etag: "abc"'); }
 if ($p === '/v1/fout') http_response_code(404);
+if ($p === '/v1/groot') { header('content-type: application/json'); echo json_encode(['x' => str_repeat('abc ', 5000), 'uri' => $_SERVER['REQUEST_URI']]); exit; }
 if ($p === '/v1/traag') sleep(40);
 header('content-type: application/json');
 header('access-control-allow-origin: *');
