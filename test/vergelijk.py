@@ -65,6 +65,7 @@ def test(naam, methode, pad, headers=None, body=None, wisselend=False):
             if jg and jg == jw and len(g[2]) == len(w[2]):
                 hv = {k for k in set(g[1]) | set(w[1]) if g[1].get(k) != w[1].get(k)}
                 if not hv: regels.append(("GELIJK*", naam, f"{g[0]}, token met alleen een ander tijdstip; verder gelijk")); return
+                if ALLEEN: print("R DEBUG headers", {k: (g[1].get(k), w[1].get(k)) for k in hv})
             if ALLEEN: print("R DEBUG tokens", len(jg), len(jw), [sorted(x[1]) for x in jg], [k for a, b in zip(jg, jw) for k in set(a[1]) | set(b[1]) if a[1].get(k) != b[1].get(k)], [a[0] == b[0] for a, b in zip(jg, jw)])
         except Exception as e:
             if ALLEEN: print("R DEBUG fout", type(e).__name__, e)
