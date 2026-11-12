@@ -16,7 +16,15 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 if ($path === '/_gateway') {
     header('content-type: application/json');
     header('cache-control: no-store');
-    echo json_encode(['ok' => true, 'gateway' => 'a-alerts', 'versie' => GATEWAY_VERSION]);
+    echo json_encode(['ok' => true, 'gateway' => 'a-alerts', 'versie' => GATEWAY_VERSION, 'actief' => GATEWAY_ACTIEF || (bool) getenv('AALERTS_UPSTREAM')]);
+    exit;
+}
+// Switched off (config.php): nothing is passed on. The tests switch it on with AALERTS_UPSTREAM.
+if (!GATEWAY_ACTIEF && !getenv('AALERTS_UPSTREAM')) {
+    http_response_code(503);
+    header('content-type: application/json');
+    header('cache-control: no-store');
+    echo json_encode(['error' => 'api.a-alerts.nl is uitgeschakeld. A-Alerts gebruikt het gewone adres van de server.']);
     exit;
 }
 if (!in_array($method, ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], true)) {

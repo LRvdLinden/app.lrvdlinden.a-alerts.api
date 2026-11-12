@@ -63,4 +63,4 @@ jobs:
           g=$(curl -s --max-time 20 https://api.a-alerts.nl/_gateway || true)
           case "$g" in *'"gateway":"a-alerts"'*) echo "::notice::api.a-alerts.nl/_gateway antwoordt: $g";; *) echo "::warning::api.a-alerts.nl/_gateway antwoordt (nog) niet. Bestaat het subdomein en wijst het naar de map waarin is geüpload?";; esac
           c=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 https://api.a-alerts.nl/v1/status || true)
-          echo "::notice::api.a-alerts.nl/v1/status: HTTP $c"
+          echo "::notice::api.a-alerts.nl/v1/status: HTTP $c (503 = uitgeschakeld in config.php)"

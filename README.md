@@ -7,8 +7,11 @@ headers en inhoud. De gateway bewaart niets, logt niets en bevat geen geheimen.
 **Waarom:** sommige netwerken en adblockers blokkeren adressen op `workers.dev`. Via het eigen adres blijft A-Alerts
 dan bereikbaar.
 
-**Status: gebouwd, nog niets gemigreerd.** De apps, de website, de widgets en de Homey-app gebruiken nog het
-`workers.dev`-adres. Overzetten gebeurt pas na akkoord.
+**Status: uitgeschakeld (12-11-2026).** Besloten is het `workers.dev`-adres te blijven gebruiken: de gateway is
+getest (71 van 71 aanvragen gelijk aan de echte API) maar per aanvraag ongeveer 0,1 seconde trager. `GATEWAY_ACTIEF`
+in `web/config.php` staat op `false`: `api.a-alerts.nl` geeft overal `503` en vraagt niets op bij de echte API.
+Weer aanzetten: `GATEWAY_ACTIEF = true` en pushen. De vergelijkingstest (`test/vergelijk.py`, workflow *Vergelijken*)
+werkt alleen als de gateway aan staat.
 
 ## Mappen
 
