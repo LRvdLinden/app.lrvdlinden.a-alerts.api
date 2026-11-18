@@ -56,11 +56,23 @@ jobs:
           ftp_run "mirror -R --parallel=2 --exclude-glob .DS_Store ./web/ \"$T\"" >/dev/null 2>&1 \
             || { echo "::error::Uploaden naar de FTP-server mislukt."; exit 1; }
           echo "::notice::Gateway geüpload."
-      - name: Controleren of api.a-alerts.nl antwoordt
+      - name: Live gateway en API controleren
         if: steps.check.outputs.skip != '1' && success()
         run: |
-          sleep 5
-          g=$(curl -s --max-time 20 https://api.a-alerts.nl/_gateway || true)
-          case "$g" in *'"gateway":"a-alerts"'*) echo "::notice::api.a-alerts.nl/_gateway antwoordt: $g";; *) echo "::warning::api.a-alerts.nl/_gateway antwoordt (nog) niet. Bestaat het subdomein en wijst het naar de map waarin is geüpload?";; esac
-          c=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 https://api.a-alerts.nl/v1/status || true)
-          echo "::notice::api.a-alerts.nl/v1/status: HTTP $c (503 = uitgeschakeld in config.php)"
+          set -euo pipefail
+          sleep 4
+          curl -fsSL --max-time 20 https://api.a-alerts.nl/_gateway -o /tmp/a-alerts-gateway.json
+          curl -fsSL --max-time 30 https://api.a-alerts.nl/health -o /tmp/a-alerts-health.json
+          curl -fsSL --max-time 30 'https://api.a-alerts.nl/v1/meldingen?limit=1' -o /tmp/a-alerts-meldingen.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          gateway=json.loads(Path('/tmp/a-alerts-gateway.json').read_text())
+          health=json.loads(Path('/tmp/a-alerts-health.json').read_text())
+          alerts=json.loads(Path('/tmp/a-alerts-meldingen.json').read_text())
+          assert gateway.get('gateway')=='a-alerts' and gateway.get('actief') is True, 'Gateway is niet actief'
+          assert health.get('ok') is True, 'Cloudflare upstream niet bereikbaar'
+          assert isinstance(alerts,(dict,list)), 'API meldingen is geen JSON-object'
+          print("PASS: api.a-alerts.nl actief; upstream health OK")
+          print("P2000/Koyeb ontvangst:", json.dumps({k:health.get(k) for k in ('feed','koyeb')},ensure_ascii=False))
+          PY
