@@ -7,7 +7,7 @@ headers en inhoud. De gateway bewaart niets, logt niets en bevat geen geheimen.
 **Waarom:** sommige netwerken en adblockers blokkeren adressen op `workers.dev`. Via het eigen adres blijft A-Alerts
 dan bereikbaar.
 
-**Status: ingeschakeld (18-11-2026).** De gateway staat aan via `GATEWAY_ACTIEF = true` in `web/config.php` en gebruikt de bestaande Cloudflare Worker als upstream. De website en apps blijven voorlopig rechtstreeks `workers.dev` gebruiken; er is geen migratie van clients uitgevoerd. De vergelijkingstest (`test/vergelijk.py`, workflow *Vergelijken*) controleert of de gateway dezelfde API-antwoorden teruggeeft.
+**Status: uitgeschakeld (18-11-2026).** De gateway staat uit via `GATEWAY_ACTIEF = false` in `web/config.php` en stuurt geen API-verzoeken door (HTTP 503). De website en apps blijven voorlopig rechtstreeks `workers.dev` gebruiken; er is geen migratie van clients uitgevoerd. De vergelijkingstest (`test/vergelijk.py`, workflow *Vergelijken*) controleert of de gateway dezelfde API-antwoorden teruggeeft.
 
 ## Mappen
 
