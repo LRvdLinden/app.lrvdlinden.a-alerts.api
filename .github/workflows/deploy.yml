@@ -62,17 +62,10 @@ jobs:
           set -euo pipefail
           sleep 4
           curl -fsSL --max-time 20 https://api.a-alerts.nl/_gateway -o /tmp/a-alerts-gateway.json
-          curl -fsSL --max-time 30 https://api.a-alerts.nl/health -o /tmp/a-alerts-health.json
-          curl -fsSL --max-time 30 'https://api.a-alerts.nl/v1/meldingen?limit=1' -o /tmp/a-alerts-meldingen.json
           python3 - <<'PY'
           import json
           from pathlib import Path
           gateway=json.loads(Path('/tmp/a-alerts-gateway.json').read_text())
-          health=json.loads(Path('/tmp/a-alerts-health.json').read_text())
-          alerts=json.loads(Path('/tmp/a-alerts-meldingen.json').read_text())
-          assert gateway.get('gateway')=='a-alerts' and gateway.get('actief') is True, 'Gateway is niet actief'
-          assert health.get('ok') is True, 'Cloudflare upstream niet bereikbaar'
-          assert isinstance(alerts,(dict,list)), 'API meldingen is geen JSON-object'
-          print("PASS: api.a-alerts.nl actief; upstream health OK")
-          print("P2000/Koyeb ontvangst:", json.dumps({k:health.get(k) for k in ('feed','koyeb')},ensure_ascii=False))
+          assert gateway.get('gateway')=='a-alerts' and gateway.get('actief') is False, 'Gateway moet uitgeschakeld zijn'
+          print("PASS: api.a-alerts.nl gateway is uitgeschakeld; clients gebruiken workers.dev")
           PY
