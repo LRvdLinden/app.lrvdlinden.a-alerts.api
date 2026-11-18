@@ -6,4 +6,4 @@ const GATEWAY_VERSION = '1.0.3';
 // Seconds to wait for the real API before answering 504.
 const UPSTREAM_TIMEOUT = 25;
 // Switch: false = the gateway passes nothing on (answers 503) and never contacts the real API.
-const GATEWAY_ACTIEF = true;
+const GATEWAY_ACTIEF = false;
