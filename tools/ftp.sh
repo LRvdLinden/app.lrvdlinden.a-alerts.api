@@ -61,3 +61,8 @@ ftp_connect() {
 ftp_run() {
   lftp -e "$_ftp_common; open --env-password -p $FTP_PORT -u \"$FTP_LOGIN_USER\" \"$FTP_SERVER\"; $1; bye"
 }
+
+# Read-only directory probe: missing candidate folders may be ignored by the caller.
+ftp_try() {
+  lftp -e "$_ftp_common; set cmd:fail-exit false; open --env-password -p $FTP_PORT -u \"$FTP_LOGIN_USER\" \"$FTP_SERVER\"; $1; bye"
+}
