@@ -7,18 +7,14 @@ headers en inhoud. De gateway bewaart niets, logt niets en bevat geen geheimen.
 **Waarom:** sommige netwerken en adblockers blokkeren adressen op `workers.dev`. Via het eigen adres blijft A-Alerts
 dan bereikbaar.
 
-**Status: uitgeschakeld (12-11-2026).** Besloten is het `workers.dev`-adres te blijven gebruiken: de gateway is
-getest (71 van 71 aanvragen gelijk aan de echte API) maar per aanvraag ongeveer 0,1 seconde trager. `GATEWAY_ACTIEF`
-in `web/config.php` staat op `false`: `api.a-alerts.nl` geeft overal `503` en vraagt niets op bij de echte API.
-Weer aanzetten: `GATEWAY_ACTIEF = true` en pushen. De vergelijkingstest (`test/vergelijk.py`, workflow *Vergelijken*)
-werkt alleen als de gateway aan staat.
+**Status: ingeschakeld (18-11-2026).** De gateway staat aan via `GATEWAY_ACTIEF = true` in `web/config.php` en gebruikt de bestaande Cloudflare Worker als upstream. De website en apps blijven voorlopig rechtstreeks `workers.dev` gebruiken; er is geen migratie van clients uitgevoerd. De vergelijkingstest (`test/vergelijk.py`, workflow *Vergelijken*) controleert of de gateway dezelfde API-antwoorden teruggeeft.
 
 ## Mappen
 
 - `web/`: wat op de hosting staat: `index.php` (de gateway), `config.php` (adres van de echte API, time-out) en `.htaccess`.
 - `test/`: `run.sh` test de gateway tegen een nagemaakte API (`upstream.php`).
-- `tools/ftps.sh`: FTPS-verbinding met gecontroleerd certificaat (zelfde als bij a-alerts.nl).
-- `.github/workflows/deploy.yml`: test, upload via FTPS en controle van `https://api.a-alerts.nl/_gateway`.
+- `tools/ftp.sh`: gewone passieve FTP-verbinding met de hosting (poort 21; niet versleuteld).
+- `.github/workflows/deploy.yml`: test, upload via gewone FTP en controle van `https://api.a-alerts.nl/_gateway`.
 
 ## Hosting
 
@@ -29,7 +25,7 @@ werkt alleen als de gateway aan staat.
 3. Veiligheid: staat in de doelmap de website a-alerts.nl (mappen als `pager`, `nieuws`, `assets`), dan stopt de
    upload zonder iets te wijzigen.
 
-Vereist op de hosting: PHP 8 met cURL en Apache met `mod_rewrite`.
+Vereist op de hosting: PHP 8 met cURL en Apache met `mod_rewrite`. Let op: gewone FTP versleutelt de overdracht van credentials en bestanden niet.
 
 ## Gedrag
 
