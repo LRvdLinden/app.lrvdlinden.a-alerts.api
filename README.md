@@ -13,8 +13,8 @@ dan bereikbaar.
 
 - `web/`: wat op de hosting staat: `index.php` (de gateway), `config.php` (adres van de echte API, time-out) en `.htaccess`.
 - `test/`: `run.sh` test de gateway tegen een nagemaakte API (`upstream.php`).
-- `tools/ftp.sh`: gewone passieve FTP-verbinding met de hosting (poort 21; niet versleuteld).
-- `.github/workflows/deploy.yml`: test, upload via gewone FTP en controle van `https://api.a-alerts.nl/_gateway`.
+- `tools/ftps.sh`: de eerder werkende FTPS-verbinding voor dit API-subdomein (met certificaatcontrole). Gewone FTP wordt op deze verbinding momenteel geweigerd.
+- `.github/workflows/deploy.yml`: test, upload via FTPS en controle van `https://api.a-alerts.nl/_gateway`.
 
 ## Hosting
 
@@ -25,7 +25,7 @@ dan bereikbaar.
 3. Veiligheid: staat in de doelmap de website a-alerts.nl (mappen als `pager`, `nieuws`, `assets`), dan stopt de
    upload zonder iets te wijzigen.
 
-Vereist op de hosting: PHP 8 met cURL en Apache met `mod_rewrite`. Let op: gewone FTP versleutelt de overdracht van credentials en bestanden niet.
+Vereist op de hosting: PHP 8 met cURL en Apache met `mod_rewrite`. De upload van deze afzonderlijke API-repository gebruikt de voor deze hosting eerder succesvol geteste versleutelde FTPS-verbinding.
 
 ## Gedrag
 
