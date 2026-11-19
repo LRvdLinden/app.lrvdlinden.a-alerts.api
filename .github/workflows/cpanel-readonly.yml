@@ -1,0 +1,21 @@
+name: cPanel controle (alleen lezen)
+on:
+  push:
+    branches: [main]
+    paths: ["tools/cpanel_readonly_preflight.py", ".github/workflows/cpanel-readonly.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Veilig controleer cPanel API toegang
+        env:
+          VIMEXX_CPANEL_API_TOKEN: ${{ secrets.VIMEXX_CPANEL_API_TOKEN }}
+          VIMEXX_CPANEL_USERNAME: ${{ secrets.VIMEXX_CPANEL_USERNAME }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME || secrets.FTP_USER }}
+          CPANEL_HOST: cpanel04.zxcs.nl
+        run: python3 tools/cpanel_readonly_preflight.py
