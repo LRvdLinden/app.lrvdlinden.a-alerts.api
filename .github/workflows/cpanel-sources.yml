@@ -1,0 +1,23 @@
+name: Configure private API source credentials
+on:
+  push:
+    branches: [main]
+    paths: ["tools/cpanel_sources.py", ".github/workflows/cpanel-sources.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  configure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write source credentials to private cPanel home
+        env:
+          VIMEXX_CPANEL_USERNAME: ${{ secrets.VIMEXX_CPANEL_USERNAME }}
+          VIMEXX_CPANEL_API_TOKEN: ${{ secrets.VIMEXX_CPANEL_API_TOKEN }}
+          P2000_PAGE_API_URL: ${{ secrets.P2000_PAGE_API_URL }}
+          VERKEER_URL: ${{ secrets.VERKEER_URL }}
+          VERKEER_TOKEN: ${{ secrets.VERKEER_TOKEN }}
+          ADSB_LOL_API_KEY: ${{ secrets.ADSB_LOL_API_KEY }}
+        run: python3 tools/cpanel_sources.py
