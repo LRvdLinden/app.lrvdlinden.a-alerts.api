@@ -2,7 +2,7 @@ name: Docs login configureren (HTTPS cPanel)
 on:
   push:
     branches: [main]
-    paths: ["tools/cpanel_docs_auth.py", ".github/workflows/docs-auth.yml"]
+    paths: ["tools/cpanel_docs_auth.py", "tools/docs_login_e2e.py", ".github/workflows/docs-auth.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,3 +19,8 @@ jobs:
           AALERTS_DOCS_USERNAME: ${{ secrets.AALERTS_DOCS_USERNAME }}
           AALERTS_DOCS_PASSWORD: ${{ secrets.AALERTS_DOCS_PASSWORD }}
         run: python3 tools/cpanel_docs_auth.py
+      - name: End-to-end login controleren
+        env:
+          AALERTS_DOCS_USERNAME: ${{ secrets.AALERTS_DOCS_USERNAME }}
+          AALERTS_DOCS_PASSWORD: ${{ secrets.AALERTS_DOCS_PASSWORD }}
+        run: python3 tools/docs_login_e2e.py
