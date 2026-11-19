@@ -28,6 +28,10 @@ function sourceFetch(string $url,string $key=''): mixed {
      CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>20,CURLOPT_HTTPHEADER=>$headers,
      CURLOPT_ENCODING=>'',CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2]);
   $body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);curl_close($ch);
+  if($status===429||$status===403){
+    // Avoid burning free rate-limited keys. Do not retry automatically in the same cron run.
+    throw new RuntimeException('upstream_rate_or_access_'.$status);
+  }
   if(!is_string($body)||$status!==200||strlen($body)>8000000)throw new RuntimeException('upstream_http_'.$status);
   return $body;
 }
@@ -61,14 +65,22 @@ function runCollector(PDO $db,string $source,string $kind,callable $fetch): void
   $items=$fetch();
   if(!is_array($items))throw new RuntimeException('collector_nonarray');
   $stmt=$db->prepare('INSERT INTO api_events(source,external_id,kind,title,occurred_at,fingerprint,payload) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE last_seen_at=CURRENT_TIMESTAMP(3),title=IF(fingerprint<>VALUES(fingerprint),VALUES(title),title),payload=IF(fingerprint<>VALUES(fingerprint),VALUES(payload),payload),fingerprint=VALUES(fingerprint),occurred_at=COALESCE(VALUES(occurred_at),occurred_at)');
+  $old=$db->prepare('SELECT fingerprint FROM api_events WHERE source=? AND external_id=?');
+  $aircraft=$source==='adsb.lol'?$db->prepare('INSERT IGNORE INTO api_aircraft_positions(aircraft_id,captured_at,lat,lon,altitude_m) VALUES (?,?,?,?,?)'):null;
+  $roundCaptured=gmdate('Y-m-d H:i:s',(int)(floor(time()/300)*300));
   foreach($items as $item){
     if(!is_array($item))continue;
     $fetched++;
     [$s,$id,$type,$title,$time,$payload]=itemRow($source,$kind,$item);
     $hash=hash('sha256',$payload);
+    $old->execute([$s,$id]);$existing=$old->fetchColumn();
     $stmt->execute([$s,$id,$type,$title,$time,$hash,$payload]);
-    if($stmt->rowCount()===1)$added++;
-    if($stmt->rowCount()===2)$changed++;
+    if($existing===false)$added++;
+    elseif(!hash_equals((string)$existing,$hash))$changed++;
+    if($aircraft&&is_numeric($item['lat']??null)&&is_numeric($item['lon']??null)){
+      $alt=$item['altitude_ft']??null;
+      $aircraft->execute([$id,$roundCaptured,(float)$item['lat'],(float)$item['lon'],is_numeric($alt)?(int)round((float)$alt*0.3048):null]);
+    }
   }
   $ok=true;
  }catch(Throwable $e){$error=substr($e->getMessage(),0,80);error_log('[AAlerts collector '.$source.'] '.$error);}
