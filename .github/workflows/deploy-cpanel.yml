@@ -45,3 +45,14 @@ jobs:
         run: |
           code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 https://api.a-alerts.nl/v1/meldingen)
           test "$code" = 401 && echo "PASS: private API refuses anonymous access" || { echo "FAIL: API HTTP $code"; exit 1; }
+      - name: Verify private docs login and secret file isolation
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 20 https://api.a-alerts.nl/docs/ -o /tmp/aalerts-docs-login.html
+          grep -q 'name="username"' /tmp/aalerts-docs-login.html
+          grep -q 'name="password"' /tmp/aalerts-docs-login.html
+          echo "PASS: docs login page available"
+          secret_status=$(curl -sS -o /tmp/aalerts-protected.txt -w "%{http_code}" --max-time 20 https://api.a-alerts.nl/_core/docs-auth.local.php)
+          test "$secret_status" = 403 -o "$secret_status" = 404 || { echo "FAIL: protected config returned HTTP $secret_status"; exit 1; }
+          echo "PASS: docs private hash file not accessible via HTTP"
+
