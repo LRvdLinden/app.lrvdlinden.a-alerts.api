@@ -1,1 +1,5 @@
 .DS_Store
+
+# Server-managed credentials must never be checked into Git.
+web/_core/docs-auth.local.php
+web/_core/docs-auth.php
