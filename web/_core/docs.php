@@ -1,8 +1,16 @@
 <?php
 declare(strict_types=1);
 function docsHome(): string {
- $root=(string)($_SERVER['DOCUMENT_ROOT']??'');
- if(preg_match('~^(/home[^/]*/[^/]+)(?:/|$)~',$root,$m))return $m[1];
+ // Apache can omit DOCUMENT_ROOT under some cPanel PHP handlers.
+ // Derive the account home from verified PHP script paths, never from request data.
+ foreach([
+   (string)($_SERVER['DOCUMENT_ROOT']??''),
+   (string)($_SERVER['SCRIPT_FILENAME']??''),
+   (string)(realpath(__DIR__)?:''),
+   (string)(realpath(dirname(__DIR__))?:'')
+ ] as $candidate) {
+   if(preg_match('~^(/home[^/]*/[^/]+)(?:/|$)~',$candidate,$m))return $m[1];
+ }
  return '';
 }
 function docsSafe(string $value): string {
@@ -23,10 +31,14 @@ function docsRoute(string $path):void {
  }
  $home=docsHome();
  $authfile=$home!==''?$home.'/aalerts-private/docs-auth.php':'';
- $auth=$authfile!==''&&is_file($authfile)?require $authfile:[];
+ clearstatcache(true);
+ $auth=$authfile!==''&&is_readable($authfile)?require $authfile:[];
  $configured=is_array($auth)&&strlen((string)($auth['password_hash']??''))>40&&
              strlen((string)($auth['username']??''))>=3;
- if(!$configured){http_response_code(503);header('Content-Type: text/plain; charset=utf-8');echo 'A-Alerts Docs: account nog niet geconfigureerd.';exit;}
+ if(!$configured){
+   error_log('A-Alerts docs auth unavailable: home=' . ($home!==''?'resolved':'unknown') . ' file=' . ($authfile!==''&&is_readable($authfile)?'readable':'not-readable') . ' hash=' . (is_array($auth)&&!empty($auth['password_hash'])?'present':'missing'));
+   http_response_code(503);header('Content-Type: text/plain; charset=utf-8');echo 'A-Alerts Docs: account nog niet geconfigureerd.';exit;
+ }
  ini_set('session.use_strict_mode','1');
  ini_set('session.use_only_cookies','1');
  ini_set('session.cookie_httponly','1');
