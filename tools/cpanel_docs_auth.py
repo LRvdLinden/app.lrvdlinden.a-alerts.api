@@ -51,7 +51,16 @@ form={"cpanel_jsonapi_user":cp_user,"cpanel_jsonapi_apiversion":"2",
  "path":home+"/aalerts-private","filename":"docs-auth.php","content":content}
 saved=call(HOST+"/json-api/cpanel",form).get("cpanelresult",{})
 if saved.get("event",{}).get("result")!=1:sys.exit("DOCS_PRIVATE_FILE_SAVE_FAILED")
-print("DOCS_CREDENTIALS_INSTALLED: cPanel accepted private password-hash write; plaintext not logged")
+print("DOCS_PRIVATE_CONFIG: cPanel accepted the private password-hash write")
+# Some shared-host PHP-FPM configurations block reads outside open_basedir.
+# This fallback is a PHP file on the server only; Apache blocks all _core paths
+# and the file independently refuses direct access. It is never committed to Git.
+local="<?php\\ndeclare(strict_types=1);\\nif (realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; }\\nreturn ['username'=>"+phpquote(username)+",'password_hash'=>"+phpquote(password_hash)+"];\\n"
+localform={**form,"path":root.rstrip("/")+"/_core","filename":"docs-auth.local.php","content":local}
+stored=call(HOST+"/json-api/cpanel",localform).get("cpanelresult",{})
+if stored.get("event",{}).get("result")!=1:sys.exit("DOCS_FALLBACK_SAVE_FAILED")
+print("DOCS_FALLBACK_CONFIG: cPanel accepted server-only password-hash file")
+
 # Independently confirm the expected file exists. Only print a boolean, not paths or filenames.
 q=urllib.parse.urlencode({"dir":home+"/aalerts-private","show_hidden":"1"})
 files=call(HOST+"/execute/Fileman/list_files?"+q)
