@@ -53,6 +53,12 @@ jobs:
           grep -q 'name="password"' /tmp/aalerts-docs-login.html
           echo "PASS: docs login page available"
           secret_status=$(curl -sS -o /tmp/aalerts-protected.txt -w "%{http_code}" --max-time 20 https://api.a-alerts.nl/_core/docs-auth.local.php)
-          test "$secret_status" = 403 -o "$secret_status" = 404 || { echo "FAIL: protected config returned HTTP $secret_status"; exit 1; }
-          echo "PASS: docs private hash file not accessible via HTTP"
+          case "$secret_status" in
+            403|404|503) ;;
+            *) echo "FAIL: protected config returned HTTP $secret_status"; exit 1 ;;
+          esac
+          if grep -qE 'password_hash|\$2y\$|AALERTS_DOCS_PASSWORD' /tmp/aalerts-protected.txt; then
+            echo "FAIL: private credential file content leaked"; exit 1
+          fi
+          echo "PASS: docs private hash file did not expose credential material (HTTP $secret_status)"
 
