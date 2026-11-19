@@ -2,8 +2,20 @@
 declare(strict_types=1);
 if(PHP_SAPI!=='cli'){http_response_code(404);exit;}
 require __DIR__.'/private-api.php';
+require_once __DIR__.'/bootstrap-db.php';
 require __DIR__.'/normalize.php';
 set_time_limit(180);
+$group=$argv[1]??'all';
+if(!in_array($group,['all','p2000','alerts','news','air','traffic','reference'],true)){
+  fwrite(STDERR,"UNKNOWN_COLLECTOR_GROUP\n");exit(2);
+}
+function groupAllows(string $source): bool {
+  global $group;
+  if($group==='all')return true;
+  $map=['p2000.page'=>'p2000','nlalert'=>'alerts','burgernet'=>'alerts','kind'=>'alerts','knmi'=>'alerts',
+    'ndw'=>'traffic','adsb.lol'=>'air','politie'=>'news','112nieuws'=>'news'];
+  return ($map[$source]??(str_starts_with($source,'reference_')?'reference':''))===$group;
+}
 $lock=fopen(sys_get_temp_dir().'/aalerts-api-private-'.substr(hash('sha256',__DIR__),0,16).'.lock','c');
 if(!$lock||!flock($lock,LOCK_EX|LOCK_NB))exit(0);
 function sourceFetch(string $url,string $key=''): mixed {
@@ -42,6 +54,7 @@ function itemRow(string $source,string $kind,array $item): array {
  return [$source,$id,$kind,mb_substr($title,0,512),$date,json_encode($item,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR)];
 }
 function runCollector(PDO $db,string $source,string $kind,callable $fetch): void {
+ if(!groupAllows($source))return;
  $run=$db->prepare('INSERT INTO api_collector_runs(source) VALUES (?)');$run->execute([$source]);$rid=(int)$db->lastInsertId();
  $fetched=0;$added=0;$changed=0;$ok=false;$error=null;
  try {
@@ -100,6 +113,7 @@ function newsFrom112(): array {
 }
 try{
  $db=privateDb();
+ aalertsEnsureSchema($db);
  if(setting('P2000_PAGE_API_URL')!=='')runCollector($db,'p2000.page','p2000',fn()=>normalizeP2000(entries(sourceJson(setting('P2000_PAGE_API_URL')))));
  runCollector($db,'nlalert','waarschuwingen',fn()=>normalizeNlAlert(entries(sourceJson('https://api.public-warning.app/api/v1/providers/nl-alert/alerts'))));
  runCollector($db,'burgernet','waarschuwingen',fn()=>normalizeBurgernet(entries(sourceJson('https://www.burgernet.nl/active'))));
@@ -124,7 +138,7 @@ try{
  runCollector($db,'112nieuws','nieuws',fn()=>newsFrom112());
  // Read-only reference snapshots from the existing Cloudflare Worker.
  // Rate-limited to one round every 15 minutes; no writes to Worker or Cloudflare.
- if((int)(floor(time()/300)%3)===0){
+ if($group==='reference'||($group==='all'&&(int)(floor(time()/300)%3)===0)){
    $worker=rtrim(setting('REFERENCE_WORKER_URL'),'/');
    if($worker!==''){
      foreach(['meldingen','waarschuwingen','nieuws','verkeer','helikopters'] as $endpoint){
