@@ -13,7 +13,9 @@ AddDefaultCharset Off
   RewriteRule ^_core(/|$) - [F,L]
   RewriteRule ^_core/docs-auth\.local\.php$ - [F,L]
   # Only publicly served asset; all docs HTML goes through authenticated PHP.
-  RewriteRule ^docs/style\.css$ - [L]
+  RewriteRule ^docs/(style|brand)\.css$ - [L]
+  # Source-owned static image previews for authenticated docs pages.
+  RewriteRule ^images/ - [L]
   RewriteRule ^ index.php [L]
 </IfModule>
 # No extra headers: the answer must be the same as that of the real API. PHP compresses the answer itself.
@@ -28,3 +30,11 @@ AddDefaultCharset Off
 <FilesMatch "^(docs-auth\.local\.php|docs-auth\.php)$">
   Require all denied
 </FilesMatch>
+
+# Standalone SVGs must never execute scripts if opened directly.
+<IfModule mod_headers.c>
+  <FilesMatch "\\.svg$">
+    Header set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+    Header set X-Content-Type-Options "nosniff"
+  </FilesMatch>
+</IfModule>
