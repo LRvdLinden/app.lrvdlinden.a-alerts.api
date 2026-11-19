@@ -17,6 +17,25 @@ jobs:
       - uses: actions/checkout@v4
       - name: PHP syntax check
         run: find web -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Genereer docs-login veilig op de runner
+        env:
+          AALERTS_DOCS_USERNAME: ${{ secrets.AALERTS_DOCS_USERNAME }}
+          AALERTS_DOCS_PASSWORD: ${{ secrets.AALERTS_DOCS_PASSWORD }}
+        run: |
+          set -euo pipefail
+          php -r '
+            $user = getenv("AALERTS_DOCS_USERNAME") ?: "";
+            $password = getenv("AALERTS_DOCS_PASSWORD") ?: "";
+            if (!preg_match("/^[A-Za-z0-9._@-]{3,100}$/", $user) || strlen($password) < 8) {
+              fwrite(STDERR, "Docs credentials not configured; skipping hash generation.\n");
+              exit(0);
+            }
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $config = "<?php\ndeclare(strict_types=1);\nreturn " . var_export(["username"=>$user,"password_hash"=>$hash], true) . ";\n";
+            file_put_contents("web/_core/docs-auth.local.php", $config);
+            chmod("web/_core/docs-auth.local.php", 0600);
+            echo "Docs hash generated in Actions runner; never committed.\n";
+          '
       - name: Upload via cPanel API HTTPS
         env:
           VIMEXX_CPANEL_API_TOKEN: ${{ secrets.VIMEXX_CPANEL_API_TOKEN }}
