@@ -33,6 +33,29 @@ function compatList(PDO $db,string $kind,int $limit=50):array {
  $q->execute([$kind]);$out=[];foreach($q as $r){$d=json_decode($r['payload'],true);if(is_array($d))$out[]=$d;}
  return $out;
 }
+function compatRecentAircraft(PDO $db,string $kind):array {
+ $q=$db->prepare('SELECT payload,last_seen_at FROM api_events WHERE kind=? AND last_seen_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 10 MINUTE) ORDER BY last_seen_at DESC LIMIT 250');
+ $q->execute([$kind]);$items=[];$seen=[];
+ foreach($q as $row){
+  $item=json_decode((string)$row['payload'],true);
+  if(!is_array($item)||empty($item['id']))continue;
+  $last=strtotime((string)($item['gezien']??''));
+  if($last===false)$last=strtotime($row['last_seen_at'].' UTC');
+  if($last!==false && time()-$last>600)continue;
+  $item['verouderd']=$last===false||time()-$last>120;
+  if(!isset($seen[$item['id']])){$seen[$item['id']]=true;$items[]=$item;}
+ }
+ return $items;
+}
+function compatMeldingAPI(array $m):array{
+ $at=$m['datum']??null;
+ $m['datum_tijd']=is_numeric($at)?gmdate('Y-m-d\\TH:i:s\\Z',(int)floor((float)$at/1000)):(string)($m['datum_tijd']??'');
+ $m['provincie']='Gelderland';
+ $m['views']=$m['views']??0;
+ $m['categorie']=$m['categorie']??null;
+ $m['incident']=$m['incident']??null;
+ return $m;
+}
 function compatRoute(string $path):void {
  if(!str_starts_with($path,'/v1/'))return;
  $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');
@@ -41,6 +64,39 @@ function compatRoute(string $path):void {
  try{
   $db=privateDb();
   $route=substr($path,4);
+  // Worker-compatible list response shapes: raw JSON arrays, not shadow-only envelopes.
+  if($route==='meldingen'&&$method==='GET'){
+    $limit=min(1000,max(1,(int)($_GET['limit']??300)));
+    $before=(string)($_GET['before']??'');
+    $sql="SELECT payload FROM api_events WHERE kind='p2000'";
+    $args=[];
+    if($before!==''){
+      $dt=strtotime($before);
+      if($dt===false)privateReply(400,['error'=>'invalid_before']);
+      $sql.=' AND occurred_at < ?';$args[]=gmdate('Y-m-d H:i:s',$dt);
+    }
+    $sql.=' ORDER BY COALESCE(occurred_at,last_seen_at) DESC LIMIT '.$limit;
+    $q=$db->prepare($sql);$q->execute($args);
+    $data=[];foreach($q as $row){$m=json_decode($row['payload'],true);if(is_array($m))$data[]=compatMeldingAPI($m);}
+    privateReply(200,$data);
+  }
+  if($route==='nieuws'&&$method==='GET'){
+    $items=compatList($db,'nieuws',min(100,(int)($_GET['limit']??50)));
+    $soort=(string)($_GET['soort']??'');
+    if($soort!=='')$items=array_values(array_filter($items,static fn($r)=>(string)($r['soort']??'')===$soort));
+    privateReply(200,$items);
+  }
+  if($route==='waarschuwingen'&&$method==='GET'){
+    privateReply(200,compatList($db,'waarschuwingen',100));
+  }
+  if($route==='helikopters'&&$method==='GET'){
+    $items=compatRecentAircraft($db,'helikopters');
+    privateReply(200,['bijgewerkt'=>gmdate('c'),'bron'=>'adsb.lol','helikopters'=>$items,'inzet'=>[],'verrijking_compleet'=>false]);
+  }
+  if($route==='lucht'&&$method==='GET'){
+    privateReply(200,['bijgewerkt'=>gmdate('c'),'bron'=>'adsb.lol','toestellen'=>compatRecentAircraft($db,'lucht')]);
+  }
+
   // Immutable/administratively editable content
   if(preg_match('~^content/(privacy|cookies|terms|disclaimer|hulp)$~',$route,$m)){
    if($method!=='GET')privateReply(405,['error'=>'method_not_allowed']);
