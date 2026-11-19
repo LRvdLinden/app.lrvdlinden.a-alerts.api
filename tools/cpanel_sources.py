@@ -10,7 +10,10 @@ hdr={"Authorization":f"cpanel {u}:{t}","Accept":"application/json"}
 rooturl="https://cpanel04.zxcs.nl:2083"
 req=urllib.request.Request(rooturl+"/execute/DomainInfo/single_domain_data?domain=api.a-alerts.nl",headers=hdr)
 with urllib.request.urlopen(req,context=ssl.create_default_context(),timeout=30) as resp:
- d=json.load(resp).get("result",{}).get("data",{})
+ response=json.load(resp)
+res=response.get("result",{})
+print("CPANEL_DOMAIN_RESPONSE",{"has_result":bool(res),"status":res.get("status"),"error_count":len(res.get("errors") or []),"data_type":type(res.get("data")).__name__})
+d=res.get("data",{})
 if isinstance(d,list):d=d[0] if d else {}
 root=str(d.get("documentroot","")) if isinstance(d,dict) else ""
 m=re.match(r"^(/home[^/]*/[^/]+)(?:/|$)",root)
