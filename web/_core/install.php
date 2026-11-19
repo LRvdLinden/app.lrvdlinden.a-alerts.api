@@ -1,14 +1,21 @@
 <?php
 declare(strict_types=1);
-// One-time schema bootstrap: requires independent admin token AND explicit install flag.
+// One-time schema bootstrap: requires ephemeral token stored outside document root.
 // Route can be removed after verification. No SQL accepted from HTTP requests.
+function docsInstallHome(): string {
+ $root=(string)($_SERVER['DOCUMENT_ROOT']??'');
+ return preg_match('~^(/home[^/]*/[^/]+)(?:/|$)~',$root,$m)?$m[1]:'';
+}
 function setupSchemaRoute(string $path): void {
  if($path!=='/v1/beheer/install')return;
  if(($_SERVER['REQUEST_METHOD']??'GET')!=='POST')privateReply(405,['error'=>'method_not_allowed']);
- $expected=setting('ADMIN_TOKEN');
+ $home=docsInstallHome();
+ $file=$home!==''?$home.'/aalerts-private/schema-once.php':'';
+ $permit=$file!==''&&is_file($file)?require $file:[];
  $header=$_SERVER['HTTP_AUTHORIZATION']??$_SERVER['REDIRECT_HTTP_AUTHORIZATION']??'';
- if(strlen($expected)<48 || !preg_match('/^Bearer ([A-Za-z0-9._~-]{48,256})$/',$header,$m) || !hash_equals($expected,$m[1]))privateReply(403,['error'=>'forbidden']);
- if(setting('INSTALL_ENABLED')!=='1')privateReply(403,['error'=>'installation_disabled']);
+ if(!is_array($permit)||empty($permit['hash'])||((int)($permit['expires']??0))<time()
+    ||!preg_match('/^Bearer ([a-f0-9]{64})$/',$header,$m)
+    ||!hash_equals((string)$permit['hash'],hash('sha256',$m[1])))privateReply(403,['error'=>'forbidden']);
  try {
   $db=privateDb();
   $sql=file_get_contents(__DIR__.'/schema-setup.sql');
