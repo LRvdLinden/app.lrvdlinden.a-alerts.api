@@ -88,18 +88,59 @@ function normalizeKind(array $rows):array{
    'link'=>$m['Readmore_URL']??'https://www.politie.nl/amberalert','at'=>$a['Sent']??null];
  }return $out;
 }
+function aalertsClassifyAircraft(array $ac): ?array {
+  $callsign=strtoupper(trim((string)($ac['flight']??'')));
+  $reg=strtoupper(trim((string)($ac['r']??'')));
+  $hex=strtolower(trim((string)($ac['hex']??'')));
+  $type=strtoupper(trim((string)($ac['t']??'')));
+  $operator=strtoupper((string)($ac['ownOp']??'').' '.(string)($ac['desc']??''));
+  if(preg_match('/^(?:LIFELN|LIFELINER|LIFE)0?([1-4])$/',$callsign,$m))
+    return ['id'=>'lifeliner'.$m[1],'naam'=>'Lifeliner '.$m[1],'soort'=>'trauma','herkenning'=>'callsign'];
+  if(preg_match('/^MEDIC0?([1-9])$/',$callsign,$m)||$reg==='PH-OOP')
+    return ['id'=>'medic01','naam'=>'Medic 01','soort'=>'trauma','medic'=>true,'herkenning'=>'callsign'];
+  if(preg_match('/^(?:ZXP|ZULU|POLITIE)0?(\\d{1,2})$/',$callsign,$m))
+    return ['id'=>'zulu'.str_pad($m[1],2,'0',STR_PAD_LEFT),'naam'=>'Zulu '.str_pad($m[1],2,'0',STR_PAD_LEFT),'soort'=>'politie','herkenning'=>'callsign'];
+  $zulu=['PH-PXA'=>'01','PH-PXB'=>'02','PH-PXC'=>'03','PH-PXD'=>'04','PH-PXE'=>'05','PH-PXF'=>'06','PH-PXX'=>'24','PH-PXY'=>'25','PH-PXZ'=>'26'];
+  if(isset($zulu[$reg]))return ['id'=>'zulu'.$zulu[$reg],'naam'=>'Zulu '.$zulu[$reg],'soort'=>'politie','herkenning'=>'registratie'];
+  $heli=in_array($type,['EC35','EC45','A139','H135','H145','EC30','A169','H160'],true)||($ac['category']??'')==='A7';
+  if($heli&&str_starts_with($reg,'PH-')&&preg_match('/ANWB|MEDICAL AIR|LIFELINER|TRAUMA/',$operator))
+    return ['id'=>'trauma-'.($hex?:$reg),'naam'=>'Traumaheli '.$reg,'soort'=>'trauma','herkenning'=>'operator'];
+  if($heli&&str_starts_with($reg,'PH-')&&preg_match('/POLITIE|POLICE|KLPD/',$operator))
+    return ['id'=>'politie-'.($hex?:$reg),'naam'=>'Politieheli '.$reg,'soort'=>'politie','herkenning'=>'operator'];
+  $kust=['PH-CGD','PH-CGE','C-FCGE','PH-NCG','PH-SAR','PH-RSQ','PH-BSR'];
+  $coast=in_array($reg,$kust,true)||preg_match('/^NCG\\d{1,3}$/',$callsign)||in_array($hex,['486449','48644b'],true);
+  if($coast)return ['id'=>'lucht-'.$hex,'naam'=>'Kustwacht '.($reg?:$callsign),'soort'=>'kustwacht','icoon'=>$heli?'kustwacht_aw189':'kustwacht_dash8'];
+  if($reg==='PH-GOV')return ['id'=>'lucht-'.$hex,'naam'=>'Regeringsvliegtuig PH-GOV','soort'=>'regering','icoon'=>'phgov'];
+  if(in_array($reg,['D-IAMT','D-IBMT'],true)||str_contains($operator,'MARECHAUSSEE'))
+    return ['id'=>'lucht-'.$hex,'naam'=>'Marechaussee '.$reg,'soort'=>'kmar','icoon'=>'kmar'];
+  $national=ctype_xdigit($hex)&&(hexdec($hex)>=0x480000&&hexdec($hex)<=0x487fff);
+  if(((int)($ac['dbFlags']??0)&1)&&$national)return ['id'=>'lucht-'.$hex,'naam'=>trim($type.' '.$reg)?:'Militair toestel','soort'=>'defensie','icoon'=>$heli?'heli':'vliegtuig'];
+  return null;
+}
 function normalizeAircraft(array $rows):array{
  $out=[];
- foreach($rows as $a){
-  if(!is_array($a))continue;
-  $hex=strtolower((string)($a['hex']??$a['icao']??''));
-  if($hex==='')continue;
-  $lat=$a['lat']??null;$lon=$a['lon']??null;
-  if(!is_numeric($lat)||!is_numeric($lon))continue;
-  $out[]=['id'=>$hex,'icao'=>$hex,'callsign'=>trim((string)($a['flight']??'')),'lat'=>(float)$lat,'lon'=>(float)$lon,
-   'altitude_ft'=>$a['alt_baro']??$a['alt_geom']??null,'speed_knots'=>$a['gs']??null,
-   'track'=>$a['track']??null,'seen_seconds'=>$a['seen_pos']??$a['seen']??null,'bron'=>'adsb.lol',
-   'raw'=>$a];
+ foreach($rows as $ac){
+  if(!is_array($ac))continue;
+  $hex=strtolower(trim((string)($ac['hex']??'')));
+  if(!preg_match('/^[0-9a-f]{6}$/',$hex))continue;
+  $lat=$ac['lat']??$ac['lastPosition']['lat']??null;
+  $lon=$ac['lon']??$ac['lastPosition']['lon']??null;
+  if(!is_numeric($lat)||!is_numeric($lon)||abs((float)$lat)>90||abs((float)$lon)>180)continue;
+  $ident=aalertsClassifyAircraft($ac);
+  if(!$ident)continue;
+  $seen=(float)($ac['seen_pos']??$ac['seen']??$ac['lastPosition']['seen_pos']??0);
+  if($seen>300||$seen<0)continue;
+  $ground=($ac['alt_baro']??null)==='ground';
+  $out[]=[
+   ...$ident,'hex'=>$hex,'icao'=>$hex,'callsign'=>trim((string)($ac['flight']??''))?:null,
+   'registratie'=>$ac['r']??null,'type'=>$ac['t']??null,'lat'=>(float)$lat,'lon'=>(float)$lon,
+   'koers'=>is_numeric($ac['track']??null)?(int)round($ac['track']):null,
+   'hoogte_ft'=>is_numeric($ac['alt_baro']??null)?(int)round($ac['alt_baro']):null,
+   'altitude_ft'=>$ac['alt_baro']??$ac['alt_geom']??null,
+   'op_grond'=>$ground,'snelheid_kt'=>is_numeric($ac['gs']??null)?(int)round($ac['gs']):null,
+   'stijgsnelheid_fpm'=>is_numeric($ac['baro_rate']??null)?(int)round($ac['baro_rate']):null,
+   'gezien'=>gmdate('c',(int)(time()-$seen)),'bron'=>'adsb.lol',
+  ];
  }
  return $out;
 }
