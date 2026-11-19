@@ -23,11 +23,11 @@ docroot=str(domain.get("documentroot") or domain.get("document_root") or "")
 if not re.match(r"^/home[^/]*/[^/]+/",docroot) or "api.a-alerts.nl" not in docroot or docroot.endswith("public_html"):
  raise RuntimeError("Deployment blocked: isolated API docroot not proven")
 files=sorted(x for x in ROOT.rglob("*") if x.is_file() and not x.is_symlink())
-if not files or len(files)>30:raise RuntimeError("Unexpected file count")
+if not files or len(files)>110:raise RuntimeError("Unexpected file count")
 for path in files:
  rel=path.relative_to(ROOT)
  if any(x in (".git",".github","..") for x in rel.parts):raise RuntimeError("Unsafe path")
- if path.stat().st_size>512000:raise RuntimeError("Unexpectedly large file")
+ if path.stat().st_size>8500000:raise RuntimeError("Unexpectedly large file")
  folder=docroot+("/"+str(rel.parent) if str(rel.parent)!="." else "")
  boundary="----AAlerts"+uuid.uuid4().hex
  payload=(
