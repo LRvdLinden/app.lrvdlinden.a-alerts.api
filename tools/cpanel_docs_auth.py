@@ -9,7 +9,7 @@ if not user or not api:raise SystemExit("MISSING_CPANEL_CREDENTIALS")
 if not docsuser or not docspass:
  print("DOCS_SECRETS_MISSING: Add AALERTS_DOCS_USERNAME and AALERTS_DOCS_PASSWORD to GitHub Actions secrets, then rerun this workflow.")
  sys.exit(0)
-if len(docspass)<16 or len(docspass)>512 or not re.fullmatch("[A-Za-z0-9._@-]{3,100}",docsuser):
+if len(docspass)<8 or len(docspass)>512 or not re.fullmatch("[A-Za-z0-9._@-]{3,100}",docsuser):
  raise SystemExit("DOCS_CREDENTIAL_POLICY_FAILED")
 headers={"Authorization":f"cpanel {user}:{api}","Accept":"application/json"}
 def call(url,post=None):
