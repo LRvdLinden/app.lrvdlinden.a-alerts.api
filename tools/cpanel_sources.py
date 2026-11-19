@@ -14,6 +14,7 @@ with urllib.request.urlopen(req,context=ssl.create_default_context(),timeout=30)
 if isinstance(d,list):d=d[0] if d else {}
 root=str(d.get("documentroot","")) if isinstance(d,dict) else ""
 m=re.match(r"^(/home[^/]*/[^/]+)(?:/|$)",root)
+print("DOCROOT_CHECK",{"has_api_domain":"api.a-alerts.nl" in root,"has_home":root.startswith("/home"),"length":len(root),"keys":sorted(d.keys()) if isinstance(d,dict) else []})
 if not m or "api.a-alerts.nl" not in root:raise RuntimeError("ISOLATED_DOCROOT_NOT_PROVEN")
 names=["P2000_PAGE_API_URL","VERKEER_URL","VERKEER_TOKEN","ADSB_LOL_API_KEY"]
 data={key:os.getenv(key,"").strip() for key in names}
