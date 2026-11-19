@@ -16,7 +16,7 @@ function normalizeP2000(array $rows):array{
     return ['code'=>(string)$x['capcode'],'naam'=>$parts[0]??null,'type'=>$parts[1]??null,'regio'=>$parts[2]??null];
   },$units)));
   $dienst=strtolower((string)($r['dienst']??'onbekend'));
-  if(preg_match('/lifeliner|traumaheli|\bmmt\b/i,$raw.' '.implode(' ',array_column($units,'naam'))))$dienst='traumaheli';
+  if(preg_match('/lifeliner|traumaheli|\bmmt\b/i',$raw.' '.implode(' ',array_column($units,'naam'))))$dienst='traumaheli';
   if(!in_array($dienst,['brandweer','ambulance','politie','traumaheli','kustwacht']))$dienst='onbekend';
   $lat=null;$lon=null;
   $coords=(string)($r['latlong']??$r['plaats_latlon']??'');
