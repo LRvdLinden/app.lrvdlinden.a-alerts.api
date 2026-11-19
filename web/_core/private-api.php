@@ -6,10 +6,14 @@ function privateConfig(): array {
   if($settings!==null)return $settings;
   $path=getenv('AALERTS_PRIVATE_CONFIG')?:'';
   if(!$path){
-    // Never place configuration inside public_html; rely on actual cPanel home.
-    $docroot=$_SERVER['DOCUMENT_ROOT']??dirname(__DIR__);
-    if(preg_match('~^(/home[^/]*/[^/]+)(?:/|$)~',(string)$docroot,$matches))
-      $path=$matches[1].'/aalerts-private/config.php';
+    // Works for Apache and CLI cron. Resolve via this source's actual server path;
+    // never read configuration from a web-visible directory.
+    foreach ([(string)($_SERVER['DOCUMENT_ROOT']??''), (string)realpath(__DIR__)] as $candidate){
+      if(preg_match('~^(/home[^/]*/[^/]+)(?:/|$)~',$candidate,$matches)){
+        $path=$matches[1].'/aalerts-private/config.php';
+        break;
+      }
+    }
   }
   // IMPORTANT: operator must verify actual path and keep this file outside docroot.
   $settings=is_file($path)?require $path:[];
