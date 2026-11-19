@@ -72,6 +72,7 @@ function runCollector(PDO $db,string $source,string $kind,callable $fetch): void
     if(!is_array($item))continue;
     $fetched++;
     [$s,$id,$type,$title,$time,$payload]=itemRow($source,$kind,$item);
+    if($source==='adsb.lol'&&!in_array($item['soort']??'',['trauma','politie'],true))$type='lucht';
     $hash=hash('sha256',$payload);
     $old->execute([$s,$id]);$existing=$old->fetchColumn();
     $stmt->execute([$s,$id,$type,$title,$time,$hash,$payload]);
