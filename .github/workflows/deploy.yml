@@ -16,5 +16,7 @@ jobs:
         run: find web -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Bestaande gateway regressietests
         run: bash test/run.sh
+      - name: Bronnormalisatie en gebiedsfiltering
+        run: php test/normalize.php
 # Deployment of api.a-alerts.nl uses deploy-cpanel.yml via HTTPS only.
 # Old FTPS deployment was retired to prevent concurrent conflicting uploads.
