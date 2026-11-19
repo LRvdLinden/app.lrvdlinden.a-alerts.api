@@ -12,7 +12,7 @@ function normalizeP2000(array $rows):array{
   $units=array_values(array_filter(array_map(static function($x){
     if(!is_array($x)||empty($x['capcode']))return null;
     $parts=explode(' / ',(string)($x['label']??''));
-    if(preg_match('/^(monitorcode|lichtkrant)/i,$parts[0]??''))return null;
+    if(preg_match('/^(monitorcode|lichtkrant)/i',$parts[0]??''))return null;
     return ['code'=>(string)$x['capcode'],'naam'=>$parts[0]??null,'type'=>$parts[1]??null,'regio'=>$parts[2]??null];
   },$units)));
   $dienst=strtolower((string)($r['dienst']??'onbekend'));
