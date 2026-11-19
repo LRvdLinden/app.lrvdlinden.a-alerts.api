@@ -38,7 +38,7 @@ function normalizeP2000(array $rows):array{
    'id'=>(string)$r['uid'],'guid'=>(string)$r['uid'],
    'title'=>trim(preg_replace('/^\s*(?:Prio\s*\d|P\s?\d|[AB]\d)\s*/i','',$raw)),
    'full_melding'=>$raw,'dienst'=>$dienst,'prioriteit'=>$prioriteit,
-   'datum'=>$when>0?$when*1000:null,
+   'datum'=>$when>0?(int)round($when*1000):null,
    'locatie'=>$r['locatie']??null,'lat'=>$lat,'lon'=>$lon,
    'stad'=>$r['plaats']??null,'regio'=>$r['vr']??$r['regio']??null,
    'capcode'=>$units[0]['code']??null,'eenheden'=>$units,
