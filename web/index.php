@@ -13,7 +13,11 @@ $path = parse_url($uri, PHP_URL_PATH) ?: '/';
 // Parallel private API takes precedence on its explicit routes only.
 // Without a valid Bearer token, or before cPanel database setup, it fails closed.
 require_once __DIR__.'/_core/private-api.php';
-if (!getenv('AALERTS_UPSTREAM')) apiRoute($path);
+if (!getenv('AALERTS_UPSTREAM')) {
+    require_once __DIR__.'/_core/compat.php';
+    compatRoute($path);
+    apiRoute($path);
+}
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
 // Own status page of the gateway (does not touch the real API).
