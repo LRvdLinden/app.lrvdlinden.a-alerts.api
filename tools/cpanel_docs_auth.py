@@ -51,7 +51,16 @@ form={"cpanel_jsonapi_user":cp_user,"cpanel_jsonapi_apiversion":"2",
  "path":home+"/aalerts-private","filename":"docs-auth.php","content":content}
 saved=call(HOST+"/json-api/cpanel",form).get("cpanelresult",{})
 if saved.get("event",{}).get("result")!=1:sys.exit("DOCS_PRIVATE_FILE_SAVE_FAILED")
-print("DOCS_CREDENTIALS_INSTALLED: password hash written to verified cPanel private directory; plaintext not logged")
+print("DOCS_CREDENTIALS_INSTALLED: cPanel accepted private password-hash write; plaintext not logged")
+# Independently confirm the expected file exists. Only print a boolean, not paths or filenames.
+q=urllib.parse.urlencode({"dir":home+"/aalerts-private","show_hidden":"1"})
+files=call(HOST+"/execute/Fileman/list_files?"+q)
+listed=files.get("result",files)
+items=listed.get("data",[])
+if isinstance(items,dict):items=list(items.values())
+found=any(isinstance(item,dict) and item.get("file")== "docs-auth.php" for item in items) if isinstance(items,list) else False
+print("DOCS_AUTH_FILE_VISIBLE:", "YES" if found else "NO_OR_UNAVAILABLE")
+
 # Verify publicly visible login form, NEVER attempt login or expose the credentials.
 probe=urllib.request.Request("https://api.a-alerts.nl/docs/",headers={"User-Agent":"AAlerts-Docs-Check"})
 try:
