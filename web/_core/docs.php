@@ -31,12 +31,18 @@ function docsRoute(string $path):void {
  }
  $home=docsHome();
  $authfile=$home!==''?$home.'/aalerts-private/docs-auth.php':'';
+ // On hosts with PHP open_basedir restrictions, the protected _core directory
+ // provides a server-only fallback (never tracked in Git or served over HTTP).
+ $fallback=__DIR__.'/docs-auth.local.php';
  clearstatcache(true);
- $auth=$authfile!==''&&is_readable($authfile)?require $authfile:[];
+ $auth=[];
+ if($authfile!==''&&is_readable($authfile)) $auth=require $authfile;
+ if((!is_array($auth)||empty($auth['password_hash'])) && is_readable($fallback))
+   $auth=require $fallback;
  $configured=is_array($auth)&&strlen((string)($auth['password_hash']??''))>40&&
              strlen((string)($auth['username']??''))>=3;
  if(!$configured){
-   error_log('A-Alerts docs auth unavailable: home=' . ($home!==''?'resolved':'unknown') . ' file=' . ($authfile!==''&&is_readable($authfile)?'readable':'not-readable') . ' hash=' . (is_array($auth)&&!empty($auth['password_hash'])?'present':'missing'));
+   error_log('A-Alerts docs auth unavailable: home=' . ($home!==''?'resolved':'unknown') . ' file=' . ($authfile!==''&&is_readable($authfile)?'readable':'not-readable') . ' fallback=' . (is_readable($fallback)?'readable':'not-readable') . ' hash=' . (is_array($auth)&&!empty($auth['password_hash'])?'present':'missing'));
    http_response_code(503);header('Content-Type: text/plain; charset=utf-8');echo 'A-Alerts Docs: account nog niet geconfigureerd.';exit;
  }
  ini_set('session.use_strict_mode','1');
