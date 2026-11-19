@@ -11,6 +11,7 @@ AddDefaultCharset Off
   RewriteRule ^config\.php$ - [F,L]
   # Internal PHP collectors are never HTTP endpoints.
   RewriteRule ^_core(/|$) - [F,L]
+  RewriteRule ^_core/docs-auth\.local\.php$ - [F,L]
   # Only publicly served asset; all docs HTML goes through authenticated PHP.
   RewriteRule ^docs/style\.css$ - [L]
   RewriteRule ^ index.php [L]
@@ -23,3 +24,7 @@ AddDefaultCharset Off
   SetEnv no-gzip 1
   SetEnv no-brotli 1
 </IfModule>
+
+<FilesMatch "^(docs-auth\.local\.php|docs-auth\.php)$">
+  Require all denied
+</FilesMatch>
