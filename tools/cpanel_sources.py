@@ -7,6 +7,7 @@ u=os.getenv("VIMEXX_CPANEL_USERNAME","")
 t=os.getenv("VIMEXX_CPANEL_API_TOKEN","")
 if not u or not t:raise SystemExit("CPANEL_AUTH_MISSING")
 hdr={"Authorization":f"cpanel {u}:{t}","Accept":"application/json"}
+print('SOURCE_SECRET_CONFIGURED', {name: bool(os.getenv(name,'')) for name in ['P2000_PAGE_API_URL','VERKEER_URL','VERKEER_TOKEN','ADSB_LOL_API_KEY']})
 rooturl="https://cpanel04.zxcs.nl:2083"
 req=urllib.request.Request(rooturl+"/execute/DomainInfo/single_domain_data?domain=api.a-alerts.nl",headers=hdr)
 with urllib.request.urlopen(req,context=ssl.create_default_context(),timeout=30) as resp:
