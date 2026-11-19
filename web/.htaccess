@@ -9,6 +9,8 @@ AddDefaultCharset Off
   # Authorization reaches PHP on every host
   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
   RewriteRule ^config\.php$ - [F,L]
+  # Internal PHP collectors are never HTTP endpoints.
+  RewriteRule ^_core(/|$) - [F,L]
   RewriteRule ^ index.php [L]
 </IfModule>
 # No extra headers: the answer must be the same as that of the real API. PHP compresses the answer itself.
