@@ -1,9 +1,19 @@
 <?php
 declare(strict_types=1);
+function aalertsPlaceKey(string $value): string {
+ return trim((string)preg_replace('/\\s+/u',' ',str_replace('-',' ',mb_strtolower($value))));
+}
+function aalertsAllowedPlace(string $place): bool {
+ static $allowed=[
+ 'apeldoorn','beekbergen','beemte broekland','hoenderloo','hoog soeren',
+ 'klarenbeek','loenen','uddel','ugchelen','wenum wiesel','wenum',
+ 'wiesel','teuge','lieren','radio kootwijk'];
+ return in_array(aalertsPlaceKey($place),$allowed,true);
+}
 function normalizeP2000(array $rows):array{
  $out=[];
  foreach($rows as $r){
-  if(!is_array($r)||empty($r['uid'])||empty($r['melding']))continue;
+  if(!is_array($r)||empty($r['uid'])||empty($r['melding'])||!aalertsAllowedPlace((string)($r['plaats']??'')))continue;
   $raw=trim((string)$r['melding']);$prioriteit=null;
   if(preg_match('/^\s*(?:Prio\s*([1-3])|P\s?([1-3])|([AB][0-3]))\b/i',$raw,$m))
    $prioriteit=isset($m[3])&&$m[3]!==''?strtoupper($m[3]):'P'.($m[1]??$m[2]);
@@ -32,8 +42,10 @@ function normalizeP2000(array $rows):array{
    'locatie'=>$r['locatie']??null,'lat'=>$lat,'lon'=>$lon,
    'stad'=>$r['plaats']??null,'regio'=>$r['vr']??$r['regio']??null,
    'capcode'=>$units[0]['code']??null,'eenheden'=>$units,
-   'voertuigen'=>$vehicles['voertuig']??[],'grip'=>$r['grip']??null,'opschaling'=>$r['soortopschaling']??null,
-   'bron'=>'p2000.page','link'=>$r['link']??'https://p2000.page/api'
+   'voertuigen'=>$vehicles['voertuig']??[],'grip'=>(!empty($r['grip'])&&(string)$r['grip']!=='0')?$r['grip']:null,
+   'opschaling'=>$r['soortopschaling']??null,
+   'vlaggen'=>implode(',',array_keys(array_filter(['groot'=>$r['groot']??null,'kruising'=>$r['kruising']??null,'spam'=>$r['antiespam']??null,'groep'=>$r['groep']??null],static fn($v)=>$v!==null&&(string)$v!==''&&(string)$v!=='0')))?:null,
+   'bron'=>'p2000.page','link'=>$r['link']??null
   ];
  }
  return $out;
