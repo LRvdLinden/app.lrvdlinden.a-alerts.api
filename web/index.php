@@ -15,6 +15,8 @@ $path = parse_url($uri, PHP_URL_PATH) ?: '/';
 require_once __DIR__.'/_core/private-api.php';
 if (!getenv('AALERTS_UPSTREAM')) {
     require_once __DIR__.'/_core/compat.php';
+    require_once __DIR__.'/_core/install.php';
+    setupSchemaRoute($path);
     compatRoute($path);
     apiRoute($path);
 }
