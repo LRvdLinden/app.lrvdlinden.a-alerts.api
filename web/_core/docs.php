@@ -24,7 +24,7 @@ function docsRoute(string $path):void {
  header('X-Frame-Options: DENY');
  header('X-Content-Type-Options: nosniff');
  header('Referrer-Policy: no-referrer');
- header("Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self' data:; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+ header("Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self' https://a-alerts.nl data:; font-src 'self' https://a-alerts.nl; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
  header('X-Robots-Tag: noindex, nofollow, noarchive');
  if(!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']!=='off'){
    header('Strict-Transport-Security: max-age=31536000');
@@ -93,12 +93,12 @@ function docsHeader(string $title):void{
  header('Content-Type: text/html; charset=utf-8');
  echo '<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
  echo '<meta name="robots" content="noindex,nofollow"><title>'.docsSafe($title).' — A-Alerts Developer</title>';
- echo '<link rel="stylesheet" href="/docs/style.css"></head><body>';
+ echo '<link rel="icon" href="https://a-alerts.nl/assets/img/aalerts-icon-32.png"><link rel="apple-touch-icon" href="https://a-alerts.nl/assets/img/aalerts-icon-180.png"><meta name="theme-color" content="#cf0a1e"><link rel="stylesheet" href="/docs/style.css?v=3"><link rel="stylesheet" href="/docs/brand.css?v=3"></head><body>';
 }
 function docsBrand():void{
- echo '<a class="brand" href="/docs" aria-label="A-Alerts Developer">';
- echo '<span class="brand-symbol" aria-hidden="true">A<span class="brand-mark">•</span></span>';
- echo '<span class="brand-copy"><strong>A-ALERTS</strong><small>DEVELOPER</small></span></a>';
+ echo '<a class="brand" href="/docs/" aria-label="A-Alerts API-documentatie">';
+ echo '<span class="brand-logo"><img src="https://a-alerts.nl/assets/img/aalerts-icon-180.png" width="44" height="44" alt="A-Alerts logo"></span>';
+ echo '<span class="brand-copy"><strong>A-Alerts</strong><small>API DOCUMENTATIE</small></span></a>';
 }
 function docsRenderLogin(string $error,string $csrf):never{
  docsHeader('Inloggen');
@@ -112,12 +112,12 @@ function docsRenderLogin(string $error,string $csrf):never{
  echo '<label for="p">Wachtwoord</label><input id="p" type="password" name="password" autocomplete="current-password" required>';
  echo '<button class="primary" type="submit">Inloggen <span aria-hidden="true">→</span></button></form>';
  echo '<p class="login-foot">Alleen toegankelijk voor geautoriseerde beheerders. Je aanmeldgegevens worden niet in GitHub opgeslagen.</p>';
- echo '</section><aside class="login-art"><div class="live-pill"><span class="red-dot"></span> A-ALERTS API</div><div class="hero-a">A<span>.</span></div><p>Jouw API.<br>Jouw data.<br>Jouw controle.</p></aside></div></body></html>';exit;
+ echo '</section><aside class="login-art"><div class="hero-tex" aria-hidden="true"></div><div class="hero-stripes" aria-hidden="true"></div><div class="pulse" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="login-art-inner"><span class="live-pill"><span class="live-dot"></span> A-ALERTS DEVELOPER</span><img class="login-art-logo" src="https://a-alerts.nl/assets/img/aalerts-icon-512.png" alt="" width="148" height="148"><h2>Elke melding.<br><span>Direct</span> live.</h2><p>De complete A-Alerts API.<br>Alle bronnen. Eén platform.</p><div class="hero-status"><span class="live-dot"></span> Privé toegang · api.a-alerts.nl</div></div></aside></div></body></html>';exit;
 }
 function docsRenderPage(array $routes,array $groups,array $selected,string $csrf):never{
  $routeKey=$selected['method'].' '.$selected['path'];
  docsHeader('API Referentie');
- echo '<div class="app-shell"><aside class="sidebar">';
+ echo '<div class="app-shell"><aside class="sidebar" id="docs-nav">';
  docsBrand();
  echo '<div class="side-label">API DOCUMENTATIE</div><nav aria-label="API onderdelen"><a class="side-home" href="/docs">Overzicht <span>↗</span></a>';
  foreach($groups as $group){
@@ -131,7 +131,7 @@ function docsRenderPage(array $routes,array $groups,array $selected,string $csrf
   }
   echo '</div>';
  }
- echo '</nav></aside><main class="main"><div class="topbar"><span><span class="status-dot"></span> API-v1 <span class="crumb">/ Documentatie</span></span>';
+ echo '</nav></aside><main class="main"><div class="topbar"><div class="topbar-leading"><a href="#docs-nav" class="mobile-nav-link" aria-label="Ga naar endpointnavigatie">☰ <span>Endpoints</span></a><span><span class="status-dot"></span> API-v1 <span class="crumb">/ Documentatie</span></span></div>';
  echo '<form method="post" action="/docs/logout"><input type="hidden" name="csrf" value="'.docsSafe($csrf).'"><button class="logout">Uitloggen ↗</button></form></div>';
  echo '<div class="body-content"><p class="eyebrow">A-ALERTS / API REFERENCE</p><h1>Developer Documentation<span class="red-period">.</span></h1>';
  echo '<p class="intro">Ontdek alle endpoints, authenticatie, parameters en responses van de toekomstige zelfstandige A-Alerts API. De status toont wat nu werkt en wat nog migratie vereist.</p>';
