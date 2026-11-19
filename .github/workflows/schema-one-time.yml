@@ -1,0 +1,22 @@
+name: Init A-Alerts database (one-time)
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/schema-one-time.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: aalerts-one-time-schema
+  cancel-in-progress: false
+jobs:
+  initialize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tables with expiring private grant
+        env:
+          VIMEXX_CPANEL_USERNAME: ${{ secrets.VIMEXX_CPANEL_USERNAME }}
+          VIMEXX_CPANEL_API_TOKEN: ${{ secrets.VIMEXX_CPANEL_API_TOKEN }}
+        run: python3 tools/cpanel_schema_one_time.py
