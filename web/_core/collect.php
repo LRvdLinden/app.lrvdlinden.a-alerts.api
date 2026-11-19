@@ -121,4 +121,20 @@ try{
  if(setting('ADSB_LOL_API_KEY')!=='')runCollector($db,'adsb.lol','helikopters',fn()=>entries(sourceJson('https://api.adsb.lol/v2/point/52.2112/5.9699/125',setting('ADSB_LOL_API_KEY'))));
  runCollector($db,'politie','nieuws',fn()=>newsFromPolice());
  runCollector($db,'112nieuws','nieuws',fn()=>newsFrom112());
+ // Read-only reference snapshots from the existing Cloudflare Worker.
+ // Rate-limited to one round every 15 minutes; no writes to Worker or Cloudflare.
+ if((int)(floor(time()/300)%3)===0){
+   $worker=rtrim(setting('REFERENCE_WORKER_URL'),'/');
+   if($worker!==''){
+     foreach(['meldingen','waarschuwingen','nieuws','verkeer','helikopters'] as $endpoint){
+       runCollector($db,'reference_'.$endpoint,'reference_'.$endpoint,function()use($worker,$endpoint){
+         $d=sourceJson($worker.'/v1/'.$endpoint.($endpoint==='meldingen'||$endpoint==='nieuws'?'?limit=100':''));
+         if(array_is_list($d))return $d;
+         foreach(['data','meldingen','items','helikopters','waarschuwingen'] as $k)
+           if(isset($d[$k])&&is_array($d[$k])&&array_is_list($d[$k]))return $d[$k];
+         throw new RuntimeException('reference_shape_unverified');
+       });
+     }
+   }
+ }
 }catch(Throwable $e){error_log('[AAlerts bootstrap collector] '.get_class($e));exit(1);}
