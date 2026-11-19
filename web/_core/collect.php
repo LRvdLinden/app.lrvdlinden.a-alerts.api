@@ -2,6 +2,7 @@
 declare(strict_types=1);
 if(PHP_SAPI!=='cli'){http_response_code(404);exit;}
 require __DIR__.'/private-api.php';
+require __DIR__.'/normalize.php';
 set_time_limit(180);
 $lock=fopen(sys_get_temp_dir().'/aalerts-api-private-'.substr(hash('sha256',__DIR__),0,16).'.lock','c');
 if(!$lock||!flock($lock,LOCK_EX|LOCK_NB))exit(0);
@@ -99,10 +100,10 @@ function newsFrom112(): array {
 }
 try{
  $db=privateDb();
- if(setting('P2000_PAGE_API_URL')!=='')runCollector($db,'p2000.page','p2000',fn()=>entries(sourceJson(setting('P2000_PAGE_API_URL'))));
- runCollector($db,'nlalert','waarschuwingen',fn()=>entries(sourceJson('https://api.public-warning.app/api/v1/providers/nl-alert/alerts')));
- runCollector($db,'burgernet','waarschuwingen',fn()=>entries(sourceJson('https://www.burgernet.nl/active')));
- runCollector($db,'kind','waarschuwingen',fn()=>entries(sourceJson('https://services.burgernet.nl/landactiehost/api/v1/alerts')));
+ if(setting('P2000_PAGE_API_URL')!=='')runCollector($db,'p2000.page','p2000',fn()=>normalizeP2000(entries(sourceJson(setting('P2000_PAGE_API_URL')))));
+ runCollector($db,'nlalert','waarschuwingen',fn()=>normalizeNlAlert(entries(sourceJson('https://api.public-warning.app/api/v1/providers/nl-alert/alerts'))));
+ runCollector($db,'burgernet','waarschuwingen',fn()=>normalizeBurgernet(entries(sourceJson('https://www.burgernet.nl/active'))));
+ runCollector($db,'kind','waarschuwingen',fn()=>normalizeKind(entries(sourceJson('https://services.burgernet.nl/landactiehost/api/v1/alerts'))));
  runCollector($db,'knmi','waarschuwingen',fn()=>entries(sourceJson('https://www.knmi.nl/api/v1/weather-warnings')));
  if(setting('VERKEER_URL')!==''&&setting('VERKEER_TOKEN')!==''){
    runCollector($db,'ndw','verkeer',function(){
@@ -118,7 +119,7 @@ try{
  }
  // 5-minute cron = 288 ADS-B requests/day, within a typical free 1000/day allowance.
  // GPS coordinates and range are identical to the currently configured A-Alerts region center only approximately.
- if(setting('ADSB_LOL_API_KEY')!=='')runCollector($db,'adsb.lol','helikopters',fn()=>entries(sourceJson('https://api.adsb.lol/v2/point/52.2112/5.9699/125',setting('ADSB_LOL_API_KEY'))));
+ if(setting('ADSB_LOL_API_KEY')!=='')runCollector($db,'adsb.lol','helikopters',fn()=>normalizeAircraft(entries(sourceJson('https://api.adsb.lol/v2/point/52.2112/5.9699/125',setting('ADSB_LOL_API_KEY')))));
  runCollector($db,'politie','nieuws',fn()=>newsFromPolice());
  runCollector($db,'112nieuws','nieuws',fn()=>newsFrom112());
  // Read-only reference snapshots from the existing Cloudflare Worker.
