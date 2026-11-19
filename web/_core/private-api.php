@@ -16,8 +16,14 @@ function privateConfig(): array {
     }
   }
   // IMPORTANT: operator must verify actual path and keep this file outside docroot.
-  $settings=is_file($path)?require $path:[];
+  $settings=($path!==''&&is_file($path))?require $path:[];
   if(!is_array($settings))$settings=[];
+  // Separate source secrets are installed by GitHub Actions without rewriting DB credentials.
+  $sources=$path!==''?dirname($path).'/sources.php':'';
+  if($sources!==''&&is_file($sources)){
+    $more=require $sources;
+    if(is_array($more))$settings=array_replace($settings,$more);
+  }
   return $settings;
 }
 function setting(string $key): string {
