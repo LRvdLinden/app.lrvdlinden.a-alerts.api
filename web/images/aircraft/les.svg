@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320"><defs>
+<linearGradient id="z" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4f58"/><stop offset=".35" stop-color="#23262c"/><stop offset="1" stop-color="#0e1013"/></linearGradient>
+<linearGradient id="zd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c3037"/><stop offset="1" stop-color="#0c0d10"/></linearGradient>
+<linearGradient id="kap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eaf3fa"/><stop offset="1" stop-color="#9fb6c8"/></linearGradient>
+<clipPath id="c"><path d="M52 168 C120 158 250 150 400 148 L792 150 C820 152 840 164 846 178 C846 194 826 204 796 206 L420 210 C280 208 150 194 60 182 C50 178 48 172 52 168Z"/></clipPath>
+<clipPath id="f"><path d="M196 158 L150 62 Q146 54 136 54 L84 54 Q76 54 78 62 L92 166Z"/></clipPath></defs>
+<g transform="translate(0 -50) scale(1 1.35)">
+<!-- far stabiliser -->
+<path fill="url(#zd)" d="M22 160 L150 156 L176 164 L150 170 L30 168Z"/>
+<!-- fin with the yellow band -->
+<path fill="url(#z)" stroke="#7b828d" stroke-width="1.5" d="M196 158 L150 62 Q146 54 136 54 L84 54 Q76 54 78 62 L92 166Z"/>
+<g clip-path="url(#f)"><path fill="#f2c81e" d="M60 116 L200 84 L200 100 L60 132Z"/><path d="M118 54 L128 166" stroke="#3a3f47" stroke-width="2"/></g>
+<!-- fuselage -->
+<path fill="url(#z)" stroke="#7b828d" stroke-width="1.5" d="M52 168 C120 158 250 150 400 148 L792 150 C820 152 840 164 846 178 C846 194 826 204 796 206 L420 210 C280 208 150 194 60 182 C50 178 48 172 52 168Z"/>
+<g clip-path="url(#c)">
+<!-- yellow line from the nose to the tail -->
+<path d="M850 190 L560 196 C480 196 420 184 340 178 L40 170" fill="none" stroke="#f2c81e" stroke-width="5"/>
+<path d="M400 152 L790 153" stroke="#6b717b" stroke-width="2" opacity=".6"/>
+</g>
+<!-- bubble canopy with frames, two seats -->
+<path fill="url(#kap)" stroke="#15171a" stroke-width="3" d="M470 150 C490 116 540 104 590 104 C640 104 690 122 716 150Z" opacity=".92"/>
+<path d="M590 104 L586 150 M658 118 L664 150" stroke="#15171a" stroke-width="3" fill="none"/>
+<path fill="#15171a" d="M530 150 C530 132 544 126 556 126 C566 126 572 134 572 150Z M612 150 C612 134 624 128 636 128 C646 128 652 136 652 150Z" opacity=".75"/>
+<path d="M500 132 C520 118 548 112 572 110" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".7"/>
+<!-- exhaust, cowling line -->
+<rect x="770" y="176" width="34" height="10" rx="5" fill="#5a6068"/><ellipse cx="772" cy="181" rx="4" ry="5" fill="#0c0d10"/>
+<path d="M760 152 L762 206" stroke="#3a3f47" stroke-width="2"/>
+<!-- roundel -->
+<circle cx="330" cy="180" r="15" fill="#ffffff"/><path d="M330 180 L330 165 A15 15 0 0 1 343 187.5Z" fill="#c8102e"/><path d="M330 180 L343 187.5 A15 15 0 0 1 317 187.5Z" fill="#1e4785"/><circle cx="330" cy="180" r="5" fill="#f28c1e"/>
+<!-- low wing, seen from the side -->
+<path fill="url(#zd)" stroke="#3a3f47" stroke-width="1.5" d="M664 200 L470 202 L430 218 L640 216Z"/>
+<path d="M650 204 L450 208" stroke="#f2c81e" stroke-width="3"/>
+<!-- near stabiliser -->
+<path fill="url(#zd)" stroke="#3a3f47" stroke-width="1.5" d="M14 174 L150 168 L184 176 L150 184 L24 182Z"/>
+<!-- propeller and yellow spinner -->
+<ellipse cx="848" cy="178" rx="5" ry="66" fill="#2a2d33"/><ellipse cx="848" cy="114" rx="5" ry="4" fill="#f2c81e"/><ellipse cx="848" cy="242" rx="5" ry="4" fill="#f2c81e"/>
+<path fill="#f2c81e" d="M844 162 C866 166 880 172 884 178 C880 184 866 190 844 194Z"/>
+</g>
+</svg>

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320"><defs><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#f1f3f6"/><stop offset="1" stop-color="#cfd5dc"/></linearGradient>
+<linearGradient id="zi" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9dde3"/><stop offset=".5" stop-color="#b9bfc8"/><stop offset="1" stop-color="#9aa1ab"/></linearGradient>
+<linearGradient id="wd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6eaee"/><stop offset="1" stop-color="#aab3bc"/></linearGradient>
+<linearGradient id="bl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#24376f"/><stop offset="1" stop-color="#141f47"/></linearGradient>
+<linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4d6072"/><stop offset=".5" stop-color="#121a22"/><stop offset="1" stop-color="#34475a"/></linearGradient>
+<clipPath id="c"><path d="M34 160 C80 148 130 138 180 135 L760 135 C800 136 838 150 858 166 C876 178 876 190 860 196 C830 204 790 206 750 206 L330 206 C230 204 110 184 34 164Z"/></clipPath>
+<clipPath id="f"><path d="M250 137 L122 26 C118 22 112 20 106 20 L52 20 C46 20 44 26 46 32 L78 140Z"/></clipPath></defs>
+<!-- far stabiliser -->
+<path fill="url(#wd)" stroke="#9aa3ac" stroke-width="1.5" d="M26 146 L118 142 L150 150 L118 156Z"/>
+<!-- fin: white leading part and top, dark blue rear -->
+<path fill="url(#w)" stroke="#9aa3ac" stroke-width="2" d="M250 137 L122 26 C118 22 112 20 106 20 L52 20 C46 20 44 26 46 32 L78 140Z"/>
+<g clip-path="url(#f)"><path fill="url(#bl)" d="M40 38 L98 38 L156 142 L60 142Z"/></g>
+<!-- fuselage -->
+<path d="M34 160 C80 148 130 138 180 135 L760 135 C800 136 838 150 858 166 C876 178 876 190 860 196 C830 204 790 206 750 206 L330 206 C230 204 110 184 34 164Z" fill="url(#w)" stroke="#9aa3ac" stroke-width="2"/>
+<g clip-path="url(#c)">
+<!-- silver front, upper side -->
+<path fill="url(#zi)" d="M486 120 C512 150 560 172 640 184 C720 196 800 200 900 204 L900 100 L486 100Z"/>
+<!-- orange sweep at the nose -->
+<path fill="#f26a21" d="M900 210 C800 208 720 201 646 185 C720 194 800 197 900 198Z"/>
+<!-- dark blue rear and belly -->
+<path fill="url(#bl)" d="M0 100 L150 132 C152 164 190 184 262 195 C322 203 382 206 430 207 L430 240 L0 240Z"/>
+</g>
+<!-- doors -->
+<g fill="none" stroke="#8a929c" stroke-width="1.6"><rect x="772" y="148" width="20" height="46" rx="5"/><rect x="556" y="150" width="17" height="40" rx="5"/><rect x="196" y="150" width="18" height="40" rx="5" stroke="#aeb6c0"/></g>
+<!-- windows -->
+<g fill="#39465a">
+<rect x="232" y="161" width="7" height="10" rx="3"/><rect x="250" y="161" width="7" height="10" rx="3"/><rect x="268" y="161" width="7" height="10" rx="3"/><rect x="286" y="161" width="7" height="10" rx="3"/><rect x="304" y="161" width="7" height="10" rx="3"/><rect x="322" y="161" width="7" height="10" rx="3"/><rect x="340" y="161" width="7" height="10" rx="3"/><rect x="358" y="161" width="7" height="10" rx="3"/><rect x="376" y="161" width="7" height="10" rx="3"/><rect x="394" y="161" width="7" height="10" rx="3"/>
+<rect x="430" y="161" width="7" height="10" rx="3"/><rect x="448" y="161" width="7" height="10" rx="3"/><rect x="466" y="161" width="7" height="10" rx="3"/><rect x="484" y="161" width="7" height="10" rx="3"/><rect x="502" y="161" width="7" height="10" rx="3"/><rect x="520" y="161" width="7" height="10" rx="3"/><rect x="538" y="161" width="7" height="10" rx="3"/>
+<rect x="586" y="161" width="7" height="10" rx="3"/><rect x="604" y="161" width="7" height="10" rx="3"/><rect x="622" y="161" width="7" height="10" rx="3"/><rect x="640" y="161" width="7" height="10" rx="3"/><rect x="658" y="161" width="7" height="10" rx="3"/><rect x="676" y="161" width="7" height="10" rx="3"/><rect x="694" y="161" width="7" height="10" rx="3"/><rect x="712" y="161" width="7" height="10" rx="3"/><rect x="730" y="161" width="7" height="10" rx="3"/><rect x="748" y="161" width="7" height="10" rx="3"/></g>
+<!-- cockpit -->
+<path fill="url(#gl)" d="M806 147 L836 155 L850 166 L812 164Z"/>
+<!-- small flag near the tail -->
+<rect x="228" y="143" width="14" height="3" fill="#c8102e"/><rect x="228" y="146" width="14" height="3" fill="#ffffff"/><rect x="228" y="149" width="14" height="3" fill="#1e4785"/>
+<!-- near stabiliser -->
+<path fill="url(#wd)" stroke="#9aa3ac" stroke-width="2" d="M14 168 L128 160 L172 172 L128 182Z"/>
+<!-- wing with the orange winglet -->
+<path fill="url(#wd)" stroke="#9aa3ac" stroke-width="2" d="M624 200 L452 202 L296 246 L330 251 L520 232 Q600 222 624 200Z"/>
+<path fill="#f26a21" stroke="#c9541a" stroke-width="1.5" d="M296 246 L268 204 L282 202 L330 250Z"/>
+<!-- engine under the wing -->
+<path fill="#9aa1ab" d="M520 206 L560 206 L548 224 L512 224Z"/>
+<path fill="url(#w)" stroke="#9aa3ac" stroke-width="2" d="M462 222 Q462 214 474 214 L580 214 Q602 216 606 236 Q602 256 580 258 L474 258 Q462 258 462 250Z"/>
+<path fill="url(#zi)" d="M578 214 Q602 216 606 236 Q602 256 578 258 Q590 236 578 214Z"/>
+<ellipse cx="603" cy="236" rx="6" ry="19" fill="#1b1f25"/>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320"><defs>
+<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d3d7dc"/><stop offset=".5" stop-color="#b4b9c0"/><stop offset="1" stop-color="#8a9098"/></linearGradient>
+<linearGradient id="d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfc4ca"/><stop offset="1" stop-color="#7f858d"/></linearGradient>
+<linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4d6072"/><stop offset=".5" stop-color="#121a22"/><stop offset="1" stop-color="#34475a"/></linearGradient>
+<clipPath id="c"><path d="M46 156 C110 150 190 144 290 142 L770 142 C812 144 846 160 864 184 C874 200 866 216 846 222 C820 230 790 234 760 234 L330 236 C250 232 130 190 50 164 C44 162 44 158 46 156Z"/></clipPath></defs>
+<g transform="translate(0 -34) scale(1 1.3)">
+<!-- far propellers -->
+<ellipse cx="716" cy="166" rx="4" ry="44" fill="#3a4048" opacity=".5"/>
+<!-- far stabiliser -->
+<path fill="url(#d)" stroke="#8a9098" stroke-width="1.5" d="M18 144 L150 140 L180 148 L150 154 L26 152Z"/>
+<!-- tall fin -->
+<path fill="url(#g)" stroke="#8a9098" stroke-width="2" d="M262 144 C226 138 196 100 160 44 Q152 30 138 30 L88 30 Q76 30 78 44 L98 152Z"/>
+<path d="M128 30 L138 150" stroke="#8a9098" stroke-width="2"/>
+<!-- fuselage with the upswept rear -->
+<path fill="url(#g)" stroke="#8a9098" stroke-width="2" d="M46 156 C110 150 190 144 290 142 L770 142 C812 144 846 160 864 184 C874 200 866 216 846 222 C820 230 790 234 760 234 L330 236 C250 232 130 190 50 164 C44 162 44 158 46 156Z"/>
+<g clip-path="url(#c)">
+<path fill="#6f757d" d="M848 150 L900 150 L900 240 L848 240 C858 220 858 180 848 150Z" opacity=".55"/>
+<path fill="#7f858d" opacity=".35" d="M0 214 L900 208 L900 250 L0 250Z"/>
+</g>
+<!-- wheel fairing -->
+<path fill="url(#d)" stroke="#8a9098" stroke-width="1.5" d="M372 222 C380 208 600 206 612 222 C616 240 600 248 580 248 L400 250 C380 248 368 238 372 222Z"/>
+<!-- cockpit windows, doors -->
+<path fill="url(#gl)" d="M790 154 L832 158 L850 172 L792 170Z"/><path fill="url(#gl)" d="M800 176 h22 v12 h-22z M828 176 l20 0 l6 12 l-26 0z"/>
+<g fill="none" stroke="#8a9098" stroke-width="2"><rect x="716" y="170" width="24" height="46" rx="5"/><rect x="298" y="168" width="26" height="48" rx="5"/></g>
+<g fill="#4a525c"><rect x="660" y="174" width="9" height="12" rx="4"/><rect x="350" y="174" width="9" height="12" rx="4"/></g>
+<!-- roundel -->
+<circle cx="250" cy="186" r="14" fill="#ffffff"/><path d="M250 186 L250 172 A14 14 0 0 1 262.1 193Z" fill="#c8102e"/><path d="M250 186 L262.1 193 A14 14 0 0 1 237.9 193Z" fill="#1e4785"/><circle cx="250" cy="186" r="4.5" fill="#f28c1e"/>
+<!-- high wing -->
+<path fill="url(#d)" stroke="#8a9098" stroke-width="2" d="M400 124 L620 128 L632 142 L390 142Z"/>
+<!-- two engines with four-blade propellers -->
+<path fill="url(#g)" stroke="#8a9098" stroke-width="2" d="M520 142 L690 144 C702 146 708 156 708 164 C706 176 694 182 676 184 L560 186 C538 184 524 168 520 142Z"/>
+<path fill="#e7eaee" stroke="#8a9098" stroke-width="1.5" d="M706 156 L724 164 L706 172Z"/>
+<ellipse cx="712" cy="164" rx="5" ry="50" fill="#2a2d33"/><ellipse cx="712" cy="116" rx="5" ry="4" fill="#f2c81e"/><ellipse cx="712" cy="212" rx="5" ry="4" fill="#f2c81e"/>
+<path fill="url(#g)" stroke="#8a9098" stroke-width="2" d="M430 142 L610 144 C622 146 628 156 628 164 C626 176 614 182 596 184 L470 186 C448 184 434 168 430 142Z"/>
+<path fill="#e7eaee" stroke="#8a9098" stroke-width="1.5" d="M626 156 L644 164 L626 172Z"/>
+<ellipse cx="632" cy="164" rx="5" ry="50" fill="#2a2d33"/><ellipse cx="632" cy="116" rx="5" ry="4" fill="#f2c81e"/><ellipse cx="632" cy="212" rx="5" ry="4" fill="#f2c81e"/>
+<!-- near stabiliser -->
+<path fill="url(#d)" stroke="#8a9098" stroke-width="2" d="M10 162 L150 156 L190 166 L150 174 L20 172Z"/>
+</g>
+</svg>
