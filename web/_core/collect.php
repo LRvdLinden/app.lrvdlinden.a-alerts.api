@@ -30,7 +30,7 @@ function entries(array $data): array {
   throw new RuntimeException('unexpected_feed_shape');
 }
 function itemRow(string $source,string $kind,array $item): array {
- $id=$item['id']??$item['guid']??$item['uid']??$item['AlertId']??$item['url']??$item['link']??null;
+ $id=$item['id']??$item['guid']??$item['uid']??$item['AlertId']??$item['hex']??$item['icao']??$item['url']??$item['link']??null;
  if(!is_scalar($id)||trim((string)$id)==='')$id=hash('sha256',json_encode($item,JSON_UNESCAPED_UNICODE));
  $id=(string)$id;if(strlen($id)>190)$id=hash('sha256',$id);
  $title=(string)($item['titel']??$item['title']??$item['melding']??$item['Message']['Title']??'');
@@ -71,7 +71,7 @@ function newsFromPolice(): array {
   $text=trim(strip_tags((string)($x['introductie']??'')));
   $all=mb_strtolower(implode(' ',[$x['titel'],$x['gebied']??'',$text]));
   // Conservative local relevance check until complete worker geo matching is ported.
-  if(!preg_match('/apeldoorn|beekbergen|ugchelen|udd el|udd(el)?|teuge|hoenderloo|klarenbeek|loenen|wenum|wiesel|radio kootwijk|hoog soeren|beemte/i',$all))continue;
+  if(!preg_match('/apeldoorn|beekbergen|ugchelen|uddel|teuge|hoenderloo|klarenbeek|loenen|wenum|wiesel|radio kootwijk|hoog soeren|beemte/i',$all))continue;
   $ref=(string)($x['uid']??$x['url']??$x['titel']);
   $out[]=['id'=>'p-'.substr(sha1($ref),0,12),'soort'=>'politie','bron'=>'politie','titel'=>(string)$x['titel'],
    'intro'=>$text,'at'=>$x['publicatiedatum']??null,'bron_url'=>$x['url']??null,'plaats'=>'Apeldoorn'];
@@ -82,6 +82,7 @@ function newsFrom112(): array {
  if(!function_exists('simplexml_load_string'))throw new RuntimeException('simplexml_missing');
  $out=[];
  $places=['apeldoorn','beekbergen','ugchelen','loenen','hoenderloo','klarenbeek','teuge','uddel'];
+ $places=['apeldoorn',$places[1+(int)(floor(time()/300)%(count($places)-1))]]; // One village per round to avoid excessive requests
  foreach($places as $slug){
   try{$xml=simplexml_load_string(sourceFetch('https://112nieuws.net/tag/'.$slug.'/feed/'),'SimpleXMLElement',LIBXML_NONET|LIBXML_NOCDATA);
    if(!$xml)continue;
@@ -117,7 +118,7 @@ try{
  }
  // 5-minute cron = 288 ADS-B requests/day, within a typical free 1000/day allowance.
  // GPS coordinates and range are identical to the currently configured A-Alerts region center only approximately.
- runCollector($db,'adsb.lol','helikopters',fn()=>entries(sourceJson('https://api.adsb.lol/v2/point/52.2112/5.9699/125',setting('ADSB_LOL_API_KEY'))));
+ if(setting('ADSB_LOL_API_KEY')!=='')runCollector($db,'adsb.lol','helikopters',fn()=>entries(sourceJson('https://api.adsb.lol/v2/point/52.2112/5.9699/125',setting('ADSB_LOL_API_KEY'))));
  runCollector($db,'politie','nieuws',fn()=>newsFromPolice());
  runCollector($db,'112nieuws','nieuws',fn()=>newsFrom112());
 }catch(Throwable $e){error_log('[AAlerts bootstrap collector] '.get_class($e));exit(1);}
