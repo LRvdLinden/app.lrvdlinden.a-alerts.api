@@ -13,8 +13,13 @@ def get(endpoint,params):
  with urllib.request.urlopen(req,context=ssl.create_default_context(),timeout=25) as response:
   body=json.load(response)
  data=body.get("result",body)
- if data.get("status") in (0,False) or data.get("errors"):return None
- return data.get("data")
+ if data.get("status") in (0,False) or data.get("errors"):
+  print("CONFIG_PROBE:",endpoint,"rejected")
+  return None
+ result=data.get("data")
+ print("CONFIG_PROBE:",endpoint,"success; result kind:",type(result).__name__,
+       "keys:", sorted(result.keys())[:12] if isinstance(result,dict) else "non-object")
+ return result
 domain=get("DomainInfo/single_domain_data",{"domain":"api.a-alerts.nl"})
 if isinstance(domain,list):domain=domain[0] if domain else None
 if not isinstance(domain,dict):raise RuntimeError("Cannot determine API docroot")
