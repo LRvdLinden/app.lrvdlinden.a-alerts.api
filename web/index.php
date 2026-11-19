@@ -14,6 +14,8 @@ $path = parse_url($uri, PHP_URL_PATH) ?: '/';
 // Without a valid Bearer token, or before cPanel database setup, it fails closed.
 require_once __DIR__.'/_core/private-api.php';
 if (!getenv('AALERTS_UPSTREAM')) {
+    require_once __DIR__.'/_core/docs.php';
+    docsRoute($path);
     require_once __DIR__.'/_core/compat.php';
     require_once __DIR__.'/_core/install.php';
     setupSchemaRoute($path);
