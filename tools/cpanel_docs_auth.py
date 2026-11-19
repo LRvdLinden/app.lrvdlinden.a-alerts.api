@@ -55,7 +55,7 @@ print("DOCS_PRIVATE_CONFIG: cPanel accepted the private password-hash write")
 # Some shared-host PHP-FPM configurations block reads outside open_basedir.
 # This fallback is a PHP file on the server only; Apache blocks all _core paths
 # and the file independently refuses direct access. It is never committed to Git.
-local="<?php\\ndeclare(strict_types=1);\\nif (realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; }\\nreturn ['username'=>"+phpquote(username)+",'password_hash'=>"+phpquote(password_hash)+"];\\n"
+local="<?php\ndeclare(strict_types=1);\nif (realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; }\nreturn ['username'=>"+phpquote(username)+",'password_hash'=>"+phpquote(password_hash)+"];\n"
 localform={**form,"path":root.rstrip("/")+"/_core","filename":"docs-auth.local.php","content":local}
 stored=call(HOST+"/json-api/cpanel",localform).get("cpanelresult",{})
 if stored.get("event",{}).get("result")!=1:sys.exit("DOCS_FALLBACK_SAVE_FAILED")
