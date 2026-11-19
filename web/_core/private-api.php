@@ -57,12 +57,18 @@ function apiRoute(string $path): bool {
       privateReply(200,['shadow'=>true,'collectors'=>$rows,'database'=>true]);
     }
     if($endpoint==='vergelijk'){
-      $groups=['p2000','nieuws','waarschuwingen','verkeer','helikopters'];
-      $result=[];foreach($groups as $g){
-        $query=$db->prepare('SELECT source,COUNT(*) AS total FROM api_events WHERE kind=? GROUP BY source');
-        $query->execute([$g]);$result[$g]=$query->fetchAll();
+      $groups=['meldingen'=>'p2000','nieuws'=>'nieuws','waarschuwingen'=>'waarschuwingen','verkeer'=>'verkeer','helikopters'=>'helikopters'];
+      $result=[];foreach($groups as $key=>$g){
+        $ref='reference_'.$key;
+        $own=$db->prepare('SELECT COUNT(*) FROM api_events WHERE kind=?');
+        $own->execute([$g]);$ownCount=(int)$own->fetchColumn();
+        $reference=$db->prepare('SELECT COUNT(*) FROM api_events WHERE kind=?');
+        $reference->execute([$ref]);$refCount=(int)$reference->fetchColumn();
+        $missing=$db->prepare('SELECT COUNT(*) FROM api_events r LEFT JOIN api_events o ON o.kind=? AND o.external_id=r.external_id WHERE r.kind=? AND o.id IS NULL');
+        $missing->execute([$g,$ref]);$missingCount=(int)$missing->fetchColumn();
+        $result[$key]=['eigen'=>$ownCount,'worker'=>$refCount,'ontbrekend_op_id'=>(int)$missingCount,'vergelijking'=>'indication_only'];
       }
-      privateReply(200,['shadow'=>true,'counts'=>$result,'parity'=>'unverified','note'=>'record counts alone are not 1:1 validation']);
+      privateReply(200,['shadow'=>true,'vergelijking'=>$result,'parity'=>'unverified','note'=>'Different collection windows and IDs; full 1:1 field validation pending']);
     }
     if(!isset($routes[$first]))privateReply(404,['error'=>'not_found']);
     $kind=$routes[$first];
@@ -71,7 +77,7 @@ function apiRoute(string $path): bool {
     $sort=(string)($_GET['soort']??'');
     $id=substr($endpoint,strlen($first)+1);
     $filters=['kind=?'];$args=[$kind];
-    if($source!==''){if(!preg_match('/^[a-z0-9_-]{2,48}$/',$source))privateReply(400,['error'=>'invalid_source']);$filters[]='source=?';$args[]=$source;}
+    if($source!==''){if(!preg_match('/^[a-z0-9_.-]{2,48}$/',$source))privateReply(400,['error'=>'invalid_source']);$filters[]='source=?';$args[]=$source;}
     if($sort!==''){if(!preg_match('/^[a-z0-9_-]{2,48}$/',$sort))privateReply(400,['error'=>'invalid_kind']);$filters[]="JSON_UNQUOTE(JSON_EXTRACT(payload,'$.soort'))=?";$args[]=$sort;}
     if($id!==''){if(strlen($id)>191)privateReply(400,['error'=>'invalid_id']);$filters[]='external_id=?';$args[]=rawurldecode($id);}
     $query=$db->prepare('SELECT source,external_id,kind,title,occurred_at,first_seen_at,last_seen_at,payload FROM api_events WHERE '.implode(' AND ',$filters).' ORDER BY COALESCE(occurred_at,last_seen_at) DESC LIMIT '.$limit);
