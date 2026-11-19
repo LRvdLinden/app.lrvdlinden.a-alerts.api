@@ -1,0 +1,19 @@
+name: Check docs private file (read only)
+on:
+  push:
+    branches: [main]
+    paths: ["tools/check_docs_file.py", ".github/workflows/docs-check.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify cPanel private file exists without exposing contents
+        env:
+          VIMEXX_CPANEL_USERNAME: ${{ secrets.VIMEXX_CPANEL_USERNAME }}
+          VIMEXX_CPANEL_API_TOKEN: ${{ secrets.VIMEXX_CPANEL_API_TOKEN }}
+        run: python3 tools/check_docs_file.py
