@@ -4,7 +4,13 @@ declare(strict_types=1);
 function privateConfig(): array {
   static $settings=null;
   if($settings!==null)return $settings;
-  $path=getenv('AALERTS_PRIVATE_CONFIG')?:dirname(__DIR__,2).'/aalerts-private/config.php';
+  $path=getenv('AALERTS_PRIVATE_CONFIG')?:'';
+  if(!$path){
+    // Never place configuration inside public_html; rely on actual cPanel home.
+    $docroot=$_SERVER['DOCUMENT_ROOT']??dirname(__DIR__);
+    if(preg_match('~^(/home[^/]*/[^/]+)(?:/|$)~',(string)$docroot,$matches))
+      $path=$matches[1].'/aalerts-private/config.php';
+  }
   // IMPORTANT: operator must verify actual path and keep this file outside docroot.
   $settings=is_file($path)?require $path:[];
   if(!is_array($settings))$settings=[];
