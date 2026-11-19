@@ -1,0 +1,54 @@
+name: Synchroniseer A-Alerts beeldmateriaal (alleen kopiëren)
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/sync_source_images.py
+      - .github/workflows/sync-images.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: aalerts-visual-assets
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout alleen API-repository voor wijzigingen
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Lees uitsluitend P2000-brand bestanden
+        uses: actions/checkout@v4
+        with:
+          repository: LRvdLinden/P2000-brand
+          ref: main
+          path: .sources/p2000-brand
+          persist-credentials: false
+      - name: Lees uitsluitend A-Alerts website en aircraft assets
+        uses: actions/checkout@v4
+        with:
+          repository: LRvdLinden/p2000-apeldoorn
+          ref: a-alerts
+          path: .sources/p2000-app
+          sparse-checkout: |
+            website/assets/img/
+            tools/lucht/
+            Shared/SharedAssets.xcassets/
+            android/app/src/main/res/drawable-nodpi/
+          persist-credentials: false
+      - name: Kopieer alle afbeeldingen zonder bronbestanden te wijzigen
+        run: python3 tools/sync_source_images.py
+      - name: Commit uitsluitend API images
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add images/ web/images/
+          if git diff --cached --quiet; then
+            echo "Assets zijn al actueel"
+            exit 0
+          fi
+          git commit -m "Sync A-Alerts brand imagery, news assets, markers, aircraft SVGs and docs previews"
+          git push origin HEAD:main
