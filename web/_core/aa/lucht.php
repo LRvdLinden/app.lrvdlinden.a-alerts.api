@@ -131,9 +131,11 @@ function aaHelikopters(): array {
   $snap=aaParse(aaKvGet('lucht:last-known-v1'),null); if(!is_array($snap))$snap=['helikopters'=>[],'lucht'=>[]];
   try{
     $ch=curl_init('https://api.adsb.lol/v2/point/52.2/5.4/160');
-    curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>8,CURLOPT_CONNECTTIMEOUT=>4,CURLOPT_ENCODING=>'',CURLOPT_HTTPHEADER=>['Accept: application/json','User-Agent: A-Alerts/1.0 (+https://a-alerts.nl)']]);
-    $raw=curl_exec($ch); $code=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
-    if($code!==200)throw new RuntimeException('ADS-B HTTP '.$code);
+    curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>8,CURLOPT_CONNECTTIMEOUT=>4,CURLOPT_ENCODING=>'',CURLOPT_HTTPHEADER=>array_merge(['Accept: application/json','User-Agent: A-Alerts/1.0 (+https://a-alerts.nl)'],
+      // The key of adsb.lol (private configuration), when there is one: a shared host IP gets refused without it.
+      setting('ADSB_LOL_API_KEY')!==''?['api-auth: '.setting('ADSB_LOL_API_KEY')]:[])]);
+    $raw=curl_exec($ch); $code=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); $cerr=curl_errno($ch); curl_close($ch);
+    if($code!==200)throw new RuntimeException('ADS-B HTTP '.$code.($cerr?' curl '.$cerr:''));
     $body=json_decode((string)$raw,true); if(!is_array($body)||!is_array($body['ac']??null))throw new RuntimeException('Invalid ADS-B payload');
     $bnow=is_numeric($body['now']??null)&&(float)$body['now']>0?(int)$body['now']:aaNow();
     $learned=aaKvPrefix('heli_hex:');
@@ -154,6 +156,8 @@ function aaHelikopters(): array {
     foreach($lucht as &$h){$h['boven']=$h['op_grond']?null:(aaPlaatsBij($h['lat'],$h['lon'])['tekst']??null);} unset($h);
     $data=['bijgewerkt'=>aaIso(aaNow()),'bron'=>'adsb.lol (ODbL)','helikopters'=>$list,'lucht'=>$lucht]; $failing=false;
   }catch(Throwable $e){
+    // Why it failed, for /docs and the checks (never a key in it): HTTP code or curl error number.
+    try{ aaKvSet('adsb_fout',aaJson(['at'=>aaIso(aaNow()),'fout'=>substr($e->getMessage(),0,80)])); }catch(Throwable){}
     $data=['bijgewerkt'=>aaIso(aaNow()),'bron'=>'adsb.lol (ODbL)','helikopters'=>[],'lucht'=>[],'fout'=>true,'verouderd'=>true]; $failing=true;
   }
   $n=aaNow(); $h=aaRetainAircraft($data['helikopters'],$snap['helikopters']??[],$n); $l=aaRetainAircraft($data['lucht'],$snap['lucht']??[],$n);
