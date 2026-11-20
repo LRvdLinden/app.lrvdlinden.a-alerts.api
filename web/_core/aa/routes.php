@@ -5,6 +5,7 @@ declare(strict_types=1);
  * Every route that is ported lives here; routes not here yet fall through to the existing handlers.
  */
 require_once __DIR__.'/meldingen.php';
+require_once __DIR__.'/vast.php';
 
 function aaReply(int $status, mixed $body, array $extra=[]): never {
   http_response_code($status);
@@ -21,7 +22,9 @@ function aaReply(int $status, mixed $body, array $extra=[]): never {
 function aaRoute(string $path): void {
   $path=rtrim($path,'/')?:'/';
   $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');
-  if(!str_starts_with($path,'/v1/meldingen'))return;
+  static $eigen=['/v1/meldingen','/v1/locaties','/v1/veiligheidsregio','/v1/changelog','/v1/content/','/v1/app','/v1/posten/'];
+  $hit=false; foreach($eigen as $p)if($path===$p||str_starts_with($path,rtrim($p,'/').'/')||($p===$path)){$hit=true;break;}
+  if(!$hit)return;
   if($method==='OPTIONS')aaReply(204,null);
   try{
     if($method==='GET'&&$path==='/v1/meldingen')
@@ -35,6 +38,12 @@ function aaRoute(string $path): void {
       $lijst=$item['incident']?aaIncidentMeldingen($item['incident']):[$item];
       aaReply(200,['guid'=>$item['guid'],'incident'=>$item['incident'],'meldingen'=>$lijst],['Cache-Control'=>'public, max-age=20']);
     }
+    if($method==='GET'&&$path==='/v1/locaties')aaReply(200,aaLocatiesData(),['Cache-Control'=>'public, max-age=86400']);
+    if($method==='GET'&&$path==='/v1/veiligheidsregio')aaReply(200,aaData('veiligheidsregio'),['Cache-Control'=>'public, max-age=86400']);
+    if($method==='GET'&&$path==='/v1/changelog')aaReply(200,aaContentFor('changelog'),['Cache-Control'=>'public, max-age=300']);
+    if($method==='GET'&&preg_match('#^/v1/content/(privacy|cookies|terms|disclaimer|hulp)$#',$path,$m))aaReply(200,aaContentFor($m[1]),['Cache-Control'=>'public, max-age=300']);
+    if($method==='GET'&&$path==='/v1/app')aaReply(200,aaAppInfo(),['Cache-Control'=>'public, max-age=600']);
+    if($method==='GET'&&preg_match('#^/v1/posten/([\w-]{3,60})$#',$path,$m)){$p=aaPostInfo($m[1]);$p?aaReply(200,$p,['Cache-Control'=>'public, max-age=120']):aaReply(404,['error'=>'Not found']);}
   }catch(Throwable $e){
     error_log('[aa route] '.get_class($e).' '.$e->getMessage());
     aaReply(500,['error'=>'Internal error']);

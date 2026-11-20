@@ -48,3 +48,13 @@ if a:
  for p in ("/v1/meldingen/"+g,"/v1/meldingen/"+g+"/verloop"):
   sw,x,_=get(W,p);se,y,bron=get(A,p)
   d=diff(x,y);print("ROUTE",p.replace(g,"{guid}"),"worker",sw,"eigen",se,"bron",bron,"verschillen",len(d),";".join(d[:6]))
+def los(path):
+ sw,x,_=get(W,path);se,y,bron=get(A,path)
+ d=diff(x,y);print("ROUTE",path,"worker",sw,"eigen",se,"bron",bron,"verschillen",len(d),";".join(d[:6]))
+for p in ["/v1/locaties","/v1/veiligheidsregio","/v1/changelog","/v1/app"]+["/v1/content/"+n for n in ("privacy","cookies","terms","disclaimer","hulp")]:los(p)
+import json as _j,pathlib
+for k in _j.loads(pathlib.Path("web/_core/aa/data/kazernes.json").read_text())[:58]:
+ sw,x,_=get(W,"/v1/posten/"+k["id"]);se,y,bron=get(A,"/v1/posten/"+k["id"])
+ d=diff(x,y)
+ if d or sw!=se:print("ROUTE /v1/posten/"+k["id"],"worker",sw,"eigen",se,"verschillen",len(d),";".join(d[:5]))
+print("POSTEN_KLAAR")

@@ -9,6 +9,7 @@ $group=$argv[1]??'all';
 if(!in_array($group,['all','p2000','alerts','news','air','traffic','reference','worker'],true)){
   fwrite(STDERR,"UNKNOWN_COLLECTOR_GROUP\n");exit(2);
 }
+function aaKvGetSafe(string $k): ?string { try{ require_once __DIR__.'/aa/base.php'; return aaKvGet($k);}catch(Throwable){return null;} }
 function groupAllows(string $source): bool {
   global $group;
   if($group==='all')return true;
@@ -198,6 +199,12 @@ try{
      runCollector($db,'worker.lucht','lucht',fn()=>$list($get('/v1/lucht'),['toestellen']));
      runCollector($db,'worker.verkeer','verkeer',fn()=>$list($get('/v1/verkeer'),['items','gepland','flitsers']));
      runCollector($db,'worker.status','snapshot',function()use($get){foreach(['/v1/status','/v1/helikopters/status','/v1/radar'] as $r)$get($r);return [];});
+   }
+   // Texts edited in the Worker beheer and the station figures it collected: copied until the switch (aa/vast.php).
+   if($minute===7||aaKvGetSafe('posten_basis_klaar')===null){
+     try{ require_once __DIR__.'/aa/vast.php'; aaEnsureSchema($db);
+       $done=aaSyncVanWorker($worker,function($u){try{return sourceJson($u);}catch(Throwable){return null;}});
+       echo 'sync '.implode(',',$done)."\n"; }catch(Throwable $e){ error_log('[aa sync] '.$e->getMessage()); }
    }
    // History from before the own intake began: copied once into the engine's own tables.
    try{ require_once __DIR__.'/aa/import.php'; aaEnsureSchema($db); $i=aaImportUitSpiegel(); if($i)echo "import meldingen=$i\n"; }catch(Throwable $e){ error_log('[aa import] '.$e->getMessage()); }
