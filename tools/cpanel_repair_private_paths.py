@@ -38,9 +38,12 @@ d=request(host+"/execute/DomainInfo/single_domain_data?domain=api.a-alerts.nl").
 if isinstance(d,list):d=d[0] if d else {}
 if not isinstance(d,dict):raise RuntimeError("Domain information unavailable")
 root=str(d.get("documentroot") or d.get("document_root") or "")
-home=str(d.get("homedir") or "")
+home=str(d.get("homedir") or "").rstrip("/")
 m=re.match(r"^(/home[^/]*/[^/]+)(?:/|$)",root)
-if not home and m:home=m.group(1)
+if m:
+  # Prefer the path derived from the isolated docroot; alternate cPanel homedir
+  # representations may include trailing slash or other account aliases.
+  home=m.group(1)
 if not re.fullmatch(r"/home[^/]*/[^/]+",home):raise RuntimeError("Account home unverified")
 if "api.a-alerts.nl" not in root and d.get("domain")!="api.a-alerts.nl":raise RuntimeError("Wrong domain")
 target=home+"/aalerts-private"
