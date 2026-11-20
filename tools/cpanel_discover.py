@@ -30,3 +30,20 @@ if dom:
   docroot=value.get("documentroot") or value.get("document_root") or ""
   print("API_DOCUMENTROOT:", "DISCOVERED" if "api" in str(docroot).lower() and "a-alerts" in str(docroot).lower() else "NEEDS_REVIEW")
 print("CRON:", "OK" if cron else "UNAVAILABLE")
+# Runtime options (names of features and versions only, never paths).
+ok,apps=get("PassengerApps","list_applications")
+print("PASSENGER_APPS:", "OK" if ok else "UNAVAILABLE", len(apps) if isinstance(apps,(list,dict)) else "-")
+ok,feat=get("Features","list_features")
+names=sorted(k for k,v in (feat or {}).items() if v and any(w in k.lower() for w in ("node","python","ruby","passenger","ssh","terminal","shell","cron","php"))) if isinstance(feat,dict) else []
+print("FEATURES:", "OK" if ok else "UNAVAILABLE", ",".join(names))
+ok,php=get("LangPHP","php_get_installed_versions")
+print("PHP_VERSIONS:", "OK" if ok else "UNAVAILABLE", ",".join(php.get("versions",[])) if isinstance(php,dict) else "")
+ok,cur=get("LangPHP","php_get_vhost_versions")
+if ok and isinstance(cur,list):
+ for v in cur:
+  if isinstance(v,dict) and "a-alerts" in str(v.get("vhost","")):print("PHP_VHOST", v.get("vhost"), v.get("version"))
+ok,res=get("ResourceUsage","get_usages")
+if ok and isinstance(res,list):
+ for r in res:
+  if isinstance(r,dict) and r.get("id") in ("cachedmysqldiskusage","lvecpu","lvememphy","lvenproc","lveep","disk_usage","mysql_databases"):
+   print("RESOURCE",r.get("id"),r.get("usage"),"/",r.get("maximum"))
