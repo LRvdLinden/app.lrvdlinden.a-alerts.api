@@ -111,7 +111,7 @@ function docsHeader(string $title):void{
  header('Content-Type: text/html; charset=utf-8');
  echo '<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
  echo '<meta name="robots" content="noindex,nofollow"><title>'.docsSafe($title).' — A-Alerts Developer</title>';
- echo '<link rel="icon" href="/images/website/aalerts-icon-32.png"><link rel="apple-touch-icon" href="/images/website/aalerts-icon-180.png"><meta name="theme-color" content="#cf0a1e"><link rel="stylesheet" href="/docs/style.css?v=3"><link rel="stylesheet" href="/docs/brand.css?v=5"><link rel="stylesheet" href="/docs/status.css?v=1"></head><body>';
+ echo '<link rel="icon" href="/images/website/aalerts-icon-32.png"><link rel="apple-touch-icon" href="/images/website/aalerts-icon-180.png"><meta name="theme-color" content="#cf0a1e"><link rel="stylesheet" href="/docs/style.css?v=3"><link rel="stylesheet" href="/docs/brand.css?v=5"><link rel="stylesheet" href="/docs/status.css?v=2"></head><body>';
 }
 function docsBrand():void{
  echo '<a class="brand" href="/docs/" aria-label="A-Alerts API-documentatie">';
