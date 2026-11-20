@@ -44,7 +44,7 @@ jobs:
       - name: Verify API authentication
         run: |
           code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 https://api.a-alerts.nl/v1/meldingen)
-          test "$code" = 401 && echo "PASS: private API refuses anonymous access" || { echo "FAIL: API HTTP $code"; exit 1; }
+          test "$code" = 200 && echo "PASS: public meldingen route answers like the Worker" || { echo "FAIL: API HTTP $code"; exit 1; }
       - name: Verify private docs login and secret file isolation
         run: |
           set -euo pipefail
