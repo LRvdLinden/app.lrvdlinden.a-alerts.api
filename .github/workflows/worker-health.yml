@@ -10,4 +10,4 @@ jobs:
     steps:
       - name: Lees /health van de Worker (alleen feedstatus)
         run: |
-          curl -fsS --max-time 20 "/health" | python3 -c "import json,sys;d=json.load(sys.stdin);print('FEED',json.dumps(d.get('feed')));print('KOYEB',json.dumps(d.get('koyeb'))[:300])"
+          curl -fsS --max-time 20 "https://p2000-apeldoorn-api.lrvdlinden.workers.dev/health" | python3 -c "import json,sys;d=json.load(sys.stdin);print('FEED',json.dumps(d.get('feed')));print('KOYEB',json.dumps(d.get('koyeb'))[:300])"
