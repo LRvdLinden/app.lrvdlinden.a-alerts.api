@@ -1,0 +1,19 @@
+name: Diagnose private configuratie (alleen lezen)
+on:
+  push:
+    branches: [main]
+    paths: ["tools/check_private_config_presence.py", ".github/workflows/check-private-config.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Controleer uitsluitend bestandsnamen, nooit inhoud
+        env:
+          VIMEXX_CPANEL_USERNAME: ${{ secrets.VIMEXX_CPANEL_USERNAME }}
+          VIMEXX_CPANEL_API_TOKEN: ${{ secrets.VIMEXX_CPANEL_API_TOKEN }}
+        run: python3 tools/check_private_config_presence.py
