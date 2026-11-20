@@ -32,7 +32,12 @@ m=re.match(r"^(/home[^/]*/[^/]+)(?:/|$)",root)
 if not home and m:home=m.group(1)
 if not home or not home.startswith("/home"):sys.exit("HOME_PATH_UNKNOWN")
 print("HOME_RESOLVED",bool(home))
+# The home derived from the document root (what the repair and deploy tools use) next to cPanel's own homedir.
+afgeleid=m.group(1) if m else ""
+print("HOME_SAME_AS_DERIVED",afgeleid==home.rstrip("/"),"DERIVED_KNOWN",bool(afgeleid))
 for label,directory in [
+ ("home_root",home),
+ ("derived_private",(afgeleid or home)+"/aalerts-private"),
  ("home_private",home+"/aalerts-private"),
  ("domain_private",root.rstrip("/")+"/aalerts-private"),
  ("api_core",root.rstrip("/")+"/_core")]:
@@ -41,3 +46,6 @@ for label,directory in [
        "config_exists",bool(names and "config.php" in names),
        "docs_auth_exists",bool(names and "docs-auth.php" in names),
        "local_docs_auth_exists",bool(names and "docs-auth.local.php" in names))
+ # Names only, never content: which other private files are there (sources, one-time schema permit).
+ print("CHECK",label,"sources_exists",bool(names and "sources.php" in names),"schema_once_exists",bool(names and "schema-once.php" in names),
+       "private_dir_exists",bool(names and "aalerts-private" in names),"count",len(names) if names is not None else -1)
