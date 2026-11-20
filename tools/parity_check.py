@@ -78,7 +78,9 @@ _,ns,_=get(W,"/v1/nieuws?limit=100")
 nd=0
 for n in (ns or []):
  sw,x,_=get(W,"/v1/nieuws/"+n["id"]);se,y,_=get(A,"/v1/nieuws/"+n["id"]);d=diff(x,y)
- if d or sw!=se:nd+=1;print("ROUTE /v1/nieuws/{"+n["soort"]+"}",n["id"],"worker",sw,"eigen",se,"verschillen",len(d),";".join(d[:5]))
+ if d or sw!=se:
+  nd+=1
+  if nd<=6:print("ROUTE /v1/nieuws/{"+n["soort"]+"}",n["id"],"worker",sw,"eigen",se,"verschillen",len(d),";".join(d[:6]))
 print("NIEUWS_DETAILS",len(ns or []),"afwijkend",nd)
 import json as _j,pathlib
 for k in _j.loads(pathlib.Path("web/_core/aa/data/kazernes.json").read_text())[:58]:
