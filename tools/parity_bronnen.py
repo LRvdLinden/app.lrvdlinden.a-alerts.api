@@ -14,4 +14,5 @@ for naam in ("proef","actief"):
    print("  BRON",k,"gelijk",v.get("gelijk",0),"verschillen",v.get("verschillen",0))
    for x in v.get("voorbeelden",[]):print("    VB",json.dumps(x,ensure_ascii=False)[:400])
  for f in p.get("_fout",[]) or []:print("  FOUT",f)
+ print("  PAGINAS",json.dumps(p.get("_burgernet_paginas"),ensure_ascii=False)[:300])
 print("BRONNEN",json.dumps(d.get("bronnen"),ensure_ascii=False))

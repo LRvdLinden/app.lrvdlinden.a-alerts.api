@@ -141,10 +141,12 @@ function aaBurgernetPaginas(int $now, array $actief): array {
   foreach($q->fetchAll() as $r){ $id=preg_replace('/^burgernet:/','',$r['id']); if(!preg_match('/^\d{4,}$/',$id)||in_array($id,$ids,true))continue;
     if($r['status']==='actief')$ids[]=$id; elseif(!str_contains((string)$r['data'],'"berichten":['))$ids[]=$id; }
   // Test mode: also the pages of the actions of the last week, to compare their timeline with what the Worker stored.
-  if(AaProef::$aan){ $q=aaDb()->prepare("SELECT id FROM waarschuwingen WHERE bron = 'burgernet' AND updated_at > ? ORDER BY updated_at DESC LIMIT 6"); $q->execute([$now-7*86400000]);
+  if(AaProef::$aan){ $q=aaDb()->prepare("SELECT id FROM waarschuwingen WHERE bron = 'burgernet' AND updated_at > ? ORDER BY updated_at DESC LIMIT 6"); $q->execute([$now-31*86400000]);
     foreach($q->fetchAll(PDO::FETCH_COLUMN) as $id){ $id=preg_replace('/^burgernet:/','',$id); if(preg_match('/^\d{4,}$/',$id)&&!in_array($id,$ids,true))$ids[]=$id; } }
   $out=[];
-  foreach(array_slice($ids,0,AaProef::$aan?8:4) as $id){ try{ $w=aaFromBurgernetSite((string)$id,aaBronFetch(AA_SOURCES['burgernetSite'].'/burgernet/'.$id,'text/html'),$now); if($w)$out[]=$w; }catch(Throwable){} }
+  foreach(array_slice($ids,0,AaProef::$aan?8:4) as $id){
+    try{ $w=aaFromBurgernetSite((string)$id,aaBronFetch(AA_SOURCES['burgernetSite'].'/burgernet/'.$id,'text/html'),$now); if($w)$out[]=$w; AaProef::$rapport['_burgernet_paginas']['gelezen'][]=$id; }
+    catch(Throwable $e){ AaProef::$rapport['_burgernet_paginas']['fout'][]=$id.' '.$e->getMessage(); } }
   return $out;
 }
 
