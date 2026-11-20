@@ -39,7 +39,11 @@ if code!=200:failed=True
 code,data=live("GET /v1/vergelijk")
 print("VERGELIJK http",code)
 for name,row in ((data or {}).get("vergelijking",{}) if isinstance(data,dict) else {}).items():
- print("AANTAL",name,"eigen",row.get("eigen"),"worker",row.get("worker"),"ontbreekt",row.get("ontbrekend_op_id"))
+ print("AANTAL",name,"eigen",row.get("eigen"),"spiegel",row.get("spiegel"),"worker",row.get("worker"),"ontbreekt_in_spiegel",row.get("ontbrekend_in_spiegel"))
+code,data=live("GET /v1/spiegel")
+print("SPIEGEL http",code)
+for row in (data or {}).get("spiegel",[]) if isinstance(data,dict) else []:
+ print("SPIEGEL_ROUTE",row.get("route"),"bijgewerkt",row.get("bijgewerkt"))
 for route in ("GET /v1/meldingen","GET /v1/nieuws","GET /v1/waarschuwingen","GET /v1/verkeer","GET /v1/helikopters"):
  code,data=live(route)
  items=data.get("data") if isinstance(data,dict) else None
