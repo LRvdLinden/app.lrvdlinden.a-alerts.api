@@ -2,7 +2,9 @@
 """Status of the own intake of the warning and news sources (GET /v1/inname, public), compact."""
 import json,urllib.request
 with urllib.request.urlopen(urllib.request.Request("https://api.a-alerts.nl/v1/inname",headers={"User-Agent":"A-Alerts-parity/1.0"}),timeout=25) as r:
- d=json.loads(r.read())
+ raw=r.read()
+ try:d=json.loads(raw)
+ except ValueError:print("GEEN_JSON status",r.status,raw[:300]);raise SystemExit(1)
 for naam in ("proef","actief"):
  p=d.get(naam)
  if not p:print(naam.upper(),"geen");continue
