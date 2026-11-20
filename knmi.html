@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<!--[if lte IE 8]>
+  <html class="no-js ie" lang="nl">
+<![endif]-->
+<!--[if gt IE 8]><!-->
+  <html class="no-js" lang="nl">
+<!--<![endif]-->
+<head>
+  <meta charset="utf-8" />
+  <title>KNMI - Waarschuwingen</title>
+    <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FJ5HN0Z9MJ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-FJ5HN0Z9MJ');
+  </script>
+
+  <meta name="description" content="Waarschuwingen">
+  <meta property="og:site_name" content="knmi.nl">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Waarschuwingen">
+<meta property="og:description" content="Waarschuwingen">
+<meta property="og:url" content="https://www.knmi.nl/nederland-nu/weer/waarschuwingen">
+  <meta name="author" content="" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="/assets/favicon-e5933646f5d8fe2d10b77fac3407738c781e8293699e6285a7ecc4a4d62ee39a.ico" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon-34d873d8614be8c7a9ba9354828b2d98e071c7b7c4dd3bc06f6d5511128cf9e6.png" />
+  <link rel="stylesheet" href="/assets/application-c2af898daf69c33b8633981dce54b86787482f3884c9dac78050ee82ec966304.css" media="all" />
+  <script>document.documentElement.className = document.documentElement.className.replace('no-js', 'js');</script>
+  <script>
+    window.googleMapsApiKey = 'AIzaSyBsnsnzQGvZSjFFtY71oLjo1gZLMSpVycc';
+  </script>
+  
+    <link rel="modulepreload" href="/assets/weather-map-368d5c961340a2a197c1a3bce62297ea1a25208ccedf8d7aa225218589013db3.js">
+<link rel="preload" href="/api/v1/weather-warnings.json" as="fetch" crossorigin="same-origin">
+<script>window.__knmiWeatherWarningsFetch=fetch("/api/v1/weather-warnings.json",{credentials:'same-origin'}).then(function(r){return r.json()});</script>
+
+
+</head>
+<body class="">
+
+<script>
+  function readCookie(name) {
+    var nameEq = name + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0; i < ca.length; i++) {
+      var c = ca[i];
+      while (c.charAt(0)==' ') c = c.substring(1, c.length);
+      if (c.indexOf(nameEq) == 0) return c.substring(nameEq.length, c.length);
+    }
+    return null;
+  }
+
+  if (readCookie('high_contrast')) {
+    document.body.classList.add('high-contrast');
+  }
+</script>
+
+
+<a tabindex="0" id="skiplink" href="#mainBody">Naar de hoofd content</a>
+
+<!--[if lt IE 9]>
+<div class="browsehappy">
+	Je gebruikt een verouderde browser. Voor een betere gebruikerservaring kun je jouw browser upgraden.
+</div>
+<![endif]-->
+
+
+<header class="site-header">
+  <div class="wrapper relative">
+    <div class="site-header__logowrp">
+      <a href="/home">
+        <img src="/assets/logo_large-1eaabc639fd87bd3867e4e1e3358711968aad57ca90d766ecdd62f93930abf3b.png" class="site-header__logo large" alt="Logo Koninklijk Nederlands Meteorologisch Instituut | Ministerie van Infrastructuur en Waterstaat" />
+        <img src="/assets/logo_small-1baa32513983c8487125691a74eb1059daa8f31f4c8a03da6e92a7f8a3b8e283.svg" class="site-header__logo small" alt="Logo Koninklijk Nederlands Meteorologisch Instituut | Ministerie van Infrastructuur en Waterstaat" />
+        <noscript>
+          <img class="site-header__logo" width="230" height="79" alt="Logo KNMI" src="/assets/logo_large-1eaabc639fd87bd3867e4e1e3358711968aad57ca90d766ecdd62f93930abf3b.png" />
+        </noscript>
+      </a>
+    </div>
+    <div class="site-header__meta">
+      <a href="/over-het-knmi/about">English</a>
+      <a data-active="normaal contrast" data-inactive="hoog contrast" class="highcontrast-toggle hidden" href="#"></a>
+    </div>
+  </div>
+  <div class="wrapper--navbar">
+    <div class="main-navbar">
+        <nav>
+          <ul>
+              <li>
+                <a class="" href="/home" target="">
+                  Home
+                  
+                </a>
+              </li>
+              <li>
+                <a class="is-active" href="/nederland-nu/weer" target="">
+                  Nederland nu
+                  <span class="nav-toggle icon-arrow-small-down" aria-label="Heeft submenu"></span>
+                </a>
+                  <ul>
+    <li><a class="is-active" href="/nederland-nu/weer">Weer</a></li>
+    <li><a class="" href="/nederland-nu/seismologie">Seismologie</a></li>
+    <li><a class="" href="/nederland-nu/maritiem">Maritiem</a></li>
+    <li><a class="" href="/nederland-nu/luchtvaart">Luchtvaart</a></li>
+    <li><a class="" href="/nederland-nu/klimatologie">Klimatologie</a></li>
+    <li><a class="" href="/nederland-nu/weer/waarschuwingen-en-verwachtingen/caribisch-nederland">Caribisch Nederland</a></li>
+</ul>
+
+              </li>
+              <li>
+                <a class="" href="/klimaat" target="">
+                  Klimaat
+                  
+                </a>
+              </li>
+              <li>
+                <a class="" href="/producten-en-diensten" target="">
+                  Producten &amp; diensten
+                  
+                </a>
+              </li>
+              <li>
+                <a class="" href="/kennis-en-datacentrum" target="">
+                  Kennis &amp; uitleg
+                  
+                </a>
+              </li>
+              <li>
+                <a class="" href="/research" target="">
+                  Research
+                  
+                </a>
+              </li>
+              <li>
+                <a class="" href="/over-het-knmi/over" target="">
+                  Over het KNMI
+                  <span class="nav-toggle icon-arrow-small-down" aria-label="Heeft submenu"></span>
+                </a>
+                  <ul>
+    <li><a class="" href="/over-het-knmi/over">Over het KNMI</a></li>
+    <li><a class="" href="/over-het-knmi/bestuur">Bestuur</a></li>
+    <li><a class="" href="/over-het-knmi/kerntaken">Kerntaken</a></li>
+    <li><a class="" href="/over-het-knmi/KNMI-werkt-internationaal">Internationaal</a></li>
+    <li><a class="" href="/over-het-knmi/vacatures">Werken bij</a></li>
+    <li><a class="" href="/over-het-knmi/nieuws">Nieuws</a></li>
+    <li><a class="" href="/over-het-knmi/agenda">Agenda</a></li>
+    <li><a class="" href="/over-het-knmi/pers">Pers</a></li>
+    <li><a class="" href="/over-het-knmi/contact/contactformulier">Contact</a></li>
+</ul>
+
+              </li>
+          </ul>
+        </nav>
+      
+      <form class="main-navbar__search" autocomplete="off" method="GET" action="/zoeken">
+        <fieldset>
+          <legend class="main-navbar__search-legend">Zoek binnen de site</legend>
+          <div class="main-navbar__search-context">
+            <input id="context_search" type="radio" name="context" value="/zoeken" />
+            <label for="context_search"><span>binnen de hele site</span></label>
+            <input id="context_data_center" type="radio" name="context" value="/kennis-en-datacentrum/zoekresultaten" />
+            <label for="context_data_center"><span>binnen het kennis- &amp; datacentrum</span></label>
+          </div>
+          <label class="main-navbar__search-label" for="q">Trefwoord</label>
+          <input type="text" id="q" name="q" placeholder="Zoeken" />
+          <button class="icon-search" type="submit"><span>Zoek</span></button>
+        </fieldset>
+      </form>
+      <a class="icon-menu main-navbar__toggle" href="#">Menu</a>
+    </div>
+    <div class="main-navbar__sub">
+        <nav>
+          <ul>
+    <li><a class="is-active" href="/nederland-nu/weer">Weer</a></li>
+    <li><a class="" href="/nederland-nu/seismologie">Seismologie</a></li>
+    <li><a class="" href="/nederland-nu/maritiem">Maritiem</a></li>
+    <li><a class="" href="/nederland-nu/luchtvaart">Luchtvaart</a></li>
+    <li><a class="" href="/nederland-nu/klimatologie">Klimatologie</a></li>
+    <li><a class="" href="/nederland-nu/weer/waarschuwingen-en-verwachtingen/caribisch-nederland">Caribisch Nederland</a></li>
+</ul>
+
+        </nav>
+    </div>
+  </div>
+</header>
+
+<div class="nav-overlay">
+  <a href="#" class="main-navbar__close icon-close">Sluiten</a>
+  <div class="nav-overlay__inner"></div>
+</div>
+
+
+<main id="mainBody" tabindex="0"  lang=nl>
+  
+<div class="wrapper weather-warnings-crumbs">
+  <div class="partials_wrapper">
+    <div class="js_breadcrumb wrapper">
+          <nav aria-label="Breadcrumb">
+    <ol class="breadcrumb">
+          <li><a class="" href="/">Home</a></li>
+          <li><a class="" href="/nederland-nu/weer">Nederland nu</a></li>
+          <li><a class="" href="/nederland-nu/weer/verwachtingen">Weer</a></li>
+          <li aria-current="page">Waarschuwingen</li>
+    </ol>
+  </nav>
+
+    </div>
+
+    
+</div>
+</div>
+
+<div class="wrapper weather-warnings weather-warnings--empty" data-weather-warnings-revision="nl___0--0--none" data-weather-warnings-version-url="/api/v1/weather-warnings/version" data-warnings-live-update-region-url="/nederland-nu/weer/waarschuwingen/live-update" data-weather-warnings-poll-interval="15000">
+  <div class="title-with-links is-oneline is-large">
+    <h1 class="title-with-links__title margin-bottom-0">Waarschuwingen</h1>
+  <ul class="title-with-links__list is-inline">
+	    	<li><a href="/nederland-nu/weer/verwachtingen">Bekijk weersverwachting</a></li>
+	    	<li><a href="/nederland-nu/weer/waarnemingen">Bekijk waarnemingen</a></li>
+  </ul>
+</div>
+
+  <div class="weather-warnings-banners">
+      <div class="weather-warnings-banner weather-warnings--green">
+  <p class="weather-warnings-banner__text">Er zijn geen waarschuwingen</p>
+  </div>
+
+  </div>
+
+    <section class="weather-warnings-empty">
+  <div class="weather-warnings-empty__layout">
+    <div class="weather-warnings-map">
+      <div data-weather-map
+     
+     data-lat="52.15"
+     data-lng="5.3"
+     data-zoom="5.75"
+     data-tile-url="pmtiles:///tiles/basemap.pmtiles"
+     data-worker-url="/assets/maplibre-gl-worker-d4f9e1231b1e953c4155b1d59f343ca68c16291a03cac0f916b2e28d9360eded.js"
+     data-labels="{&quot;levels&quot;:{&quot;yellow&quot;:&quot;Code geel&quot;,&quot;orange&quot;:&quot;Code oranje&quot;,&quot;red&quot;:&quot;Code rood&quot;},&quot;previous_times&quot;:&quot;Vorige tijden&quot;,&quot;next_times&quot;:&quot;Volgende tijden&quot;,&quot;map&quot;:&quot;Waarschuwingskaart&quot;,&quot;period_legend&quot;:&quot;Kies een periode&quot;,&quot;area_unknown&quot;:&quot;gebied niet opgegeven&quot;,&quot;empty&quot;:&quot;Het KNMI waarschuwt voor gevaarlijk weer bij gladheid, hitte, kou, mist, onweersbuien, sneeuw, waterhozen, windstoten en zware regen.&quot;}"
+     
+     class="weather-deck-map">
+</div>
+
+    </div>
+
+    <article class="weather-warnings-details">
+      <h2 class="weather-warnings-details__title">Er zijn geen waarschuwingen</h2>
+      <p class="weather-warnings-details__body">Het KNMI waarschuwt voor gevaarlijk weer bij gladheid, hitte, kou, mist, onweersbuien, sneeuw, waterhozen, windstoten en zware regen.</p>
+    </article>
+  </div>
+</section>
+
+</div>
+
+
+<div class="wrapper knmi-weather-app-banner-wrp">
+  <div class="columns">
+    <div class="col-sm-12 col-md-10 col-md-offset-1">
+      
+<div
+  class="knmi-weather-app-banner knmi-weather-app-banner--dark knmi-weather-app-banner--shortened"
+  role="region"
+  aria-label="Promotie KNMI Weerapp"
+  data-knmi-weather-app-banner
+  data-app-info-path="/kennis-en-datacentrum/uitleg/knmi-app"
+  data-cookie-name="knmi_weather_app_banner_dismissed"
+  data-cookie-days="31"
+>
+  <button
+    type="button"
+    class="knmi-weather-app-banner__close"
+    data-knmi-weather-app-banner-close
+    aria-label="Banner sluiten"
+  >&times;</button>
+
+  <div class="knmi-weather-app-banner__inner">
+    <div class="knmi-weather-app-banner__icon">
+        <img alt="" src="/assets/knmi-weerapp/icon-4c185c6bc30c06072008106331d3b999077dc380afaac6b4abf32a3e41bd5228.png" />
+    </div>
+
+    <div class="knmi-weather-app-banner__body">
+      <h2 class="knmi-weather-app-banner__title">KNMI-app</h2>
+      <p class="knmi-weather-app-banner__subtitle">Meldingen ontvangen voor onze waarschuwingen?</p>
+    </div>
+
+    <div class="knmi-weather-app-banner__actions">
+      <a class="btn btn--blue" data-knmi-weather-app-banner-download="true" href="/kennis-en-datacentrum/uitleg/knmi-app">
+        Download
+</a>    </div>
+  </div>
+</div>
+
+    </div>
+  </div>
+</div>
+
+  <div class="wrapper weather-warnings-page-share">
+  <div class="share-options">
+  <input type="checkbox" id="page-id" class="share-button" onclick="showNotification('')" />
+  <label for="page-id">
+    <span class="page-share-icon"><img src="/assets/icons/share-41bad2d91bdd14af06e2cf8a848b5ba4f23136c9bb131edbcd35ffe578d18a1f.svg" alt="Deel icoon" />Pagina delen</span>
+  </label>
+</div>
+
+</div>
+
+
+  <div class="wrapper">
+      <div class="morelinks columns">
+    <div class="col-sm-12 col-md-10 col-md-offset-1">
+      <h2 class="morelinks__title">Meer waarschuwingen</h2>
+      <ul>
+            <li><a class="btn " href="/kennis-en-datacentrum/waarschuwingen/onweersbuien" >Wat kan ik verwachten en wat kan ik doen bij onweersbuien?</a></li>
+            <li><a class="btn " href="/kennis-en-datacentrum/waarschuwingen/windstoten" >Wat kan ik verwachten en wat kan ik doen bij zware windstoten en storm?</a></li>
+            <li><a class="btn " href="/kennis-en-datacentrum/waarschuwingen/sneeuw-en-gladheid" >Wat kan ik verwachten en wat kan ik doen bij gladheid door sneeuw?</a></li>
+            <li><a class="btn " href="/kennis-en-datacentrum/waarschuwingen/gladheid" >Wat kan ik verwachten en wat kan ik doen bij gladheid door ijzel?</a></li>
+            <li><a class="btn " href="/kennis-en-datacentrum/waarschuwingen/zware-regen" >Wat kan ik verwachten en wat kan ik doen bij zware regen</a></li>
+            <li><a class="btn " href="/kennis-en-datacentrum/waarschuwingen/kou" >Wat kan ik verwachten en wat kan ik doen bij extreme kou?</a></li>
+            <li><a class="btn " href="/kennis-en-datacentrum/waarschuwingen/hitte" >Wat kan ik verwachten en wat kan ik doen bij hitte?</a></li>
+            <li><a class="btn " href="/kennis-en-datacentrum/waarschuwingen/zicht" >Wat kan ik verwachten en wat kan ik doen bij slecht zicht door mist?</a></li>
+            <li><a class="btn " href="/kennis-en-datacentrum/uitleg/waterhozen" >Meer uitleg over wind- en waterhozen</a></li>
+            <li><a class="btn " href="/kennis-en-datacentrum/uitleg/knmi-waarschuwingen" >Waarom waarschuwt het KNMI en wat betekenen de kleurcodes?</a></li>
+            <li><a class="btn " href="/kennis-en-datacentrum/achtergrond/hoe-komen-de-waarschuwingen-van-het-knmi-tot-stand" >Hoe komen de waarschuwingen van het KNMI tot stand?</a></li>
+            <li><a class="btn " href="/nederland-nu/weer/waarschuwingen-en-verwachtingen/waarschuwingen-kust-en-noordzee" >Waarschuwingen kust- en Noordzeedistricten</a></li>
+            <li><a class="btn " href="/nederland-nu/weer/actueel-weer/neerslagradar" >Neerslagradar</a></li>
+            <li><a class="btn is-external" href="https://www.meteoalarm.org" target="_blank">Meteoalarm Europa</a></li>
+      </ul>
+    </div>
+  </div>
+
+  </div>
+
+<div class="wrapper banner-visual-wrp">
+  <a class="banner-visual" href="/nederland-nu/weer/verwachtingen">
+	<div class="banner-visual__img">
+		<div class="banner-visual__img-inner b-lazy" data-src="/assets/weather-forecast-3161e6b5c6ba9e42cd74f7e0406503daf92a0f996a57294f92c0af31564c43f7.jpg"></div>
+	</div>
+	<span class="h2 icon-arrow-right-after">Bekijk weersverwachting</span>
+</a>
+
+  <a class="banner-visual" href="/nederland-nu/weer/waarnemingen">
+	<div class="banner-visual__img">
+		<div class="banner-visual__img-inner b-lazy" data-src="/assets/weather-observations-c6d395e69757a6c8073a37a49bb0d9beeac7d33f2a207e13bd6f93f88f0e4973.jpg"></div>
+	</div>
+	<span class="h2 icon-arrow-right-after">Bekijk waarnemingen</span>
+</a>
+
+</div>
+
+</main>
+
+<footer class="site-footer">
+    <div class="share">
+      <h2 class="share__title">Volg ons op social media</h2>
+      <ul class="share__list">
+          <li>
+            <a href="https://nl.linkedin.com/company/knmi" class="share__button volg ons op linkedin" target="_blank" rel="noopener" title="Volg ons op LinkedIn">
+              <img alt="Volg ons op LinkedIn" class="social-icon" src="https://cdn.knmi.nl/system/social_links/images/000/000/001/icon/knmi-footer-social-linkedin.png?1770752257" />
+            </a>
+          </li>
+          <li>
+            <a href="https://www.instagram.com/knmi.nl/" class="share__button volg ons op instagram" target="_blank" rel="noopener" title="Volg ons op Instagram">
+              <img alt="Volg ons op Instagram" class="social-icon" src="https://cdn.knmi.nl/system/social_links/images/000/000/004/icon/knmi-footer-social-instagram.png?1770752258" />
+            </a>
+          </li>
+          <li>
+            <a href="https://www.youtube.com/channel/UCqQtmDbRgKOoJ_lPv_mU9nQ" class="share__button volg ons op youtube" target="_blank" rel="noopener" title="Volg ons op YouTube">
+              <img alt="Volg ons op YouTube" class="social-icon" src="https://cdn.knmi.nl/system/social_links/images/000/000/002/icon/knmi-footer-social-youtube.png?1770752258" />
+            </a>
+          </li>
+          <li>
+            <a href="https://bsky.app/profile/knmi.nl" class="share__button volg ons op bluesky" target="_blank" rel="noopener" title="Volg ons op Bluesky">
+              <img alt="Volg ons op Bluesky" class="social-icon" src="https://cdn.knmi.nl/system/social_links/images/000/000/005/icon/knmi-footer-social-bluesky.png?1770752258" />
+            </a>
+          </li>
+          <li>
+            <a href="https://social.overheid.nl/@knmi" class="share__button volg ons op mastodon" target="_blank" rel="me noopener" title="Volg ons op Mastodon">
+              <img alt="Volg ons op Mastodon" class="social-icon" src="https://cdn.knmi.nl/system/social_links/images/000/000/003/icon/knmi-footer-social-mastodon.png?1770752258" />
+            </a>
+          </li>
+      </ul>
+    </div>
+  <div>
+    <ul>
+      <li><a href="/copyright">Copyright</a></li>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/cookies">Cookies</a></li>
+      <li><a href="/toegankelijkheid">Toegankelijkheid</a></li>
+    </ul>
+  </div>
+</footer>
+
+
+<div class="loading-modal"></div>
+
+<script>window.ahoyEnabled = true;</script>
+<script src="/assets/application-d757c2b602bc5e4e493867375dfd6711fab1a4a431bd99518a6c6d84fd09dad8.js"></script>
+  <script src="/assets/weather-map-368d5c961340a2a197c1a3bce62297ea1a25208ccedf8d7aa225218589013db3.js" type="module"></script>
+
+
+
+
+</body>
+</html>
