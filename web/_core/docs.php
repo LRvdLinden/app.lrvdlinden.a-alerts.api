@@ -83,13 +83,28 @@ function docsRoute(string $path):void {
  if(!$logged){unset($_SESSION['docs_user']);docsRenderLogin($error,(string)$_SESSION['docs_csrf']);}
  $_SESSION['docs_at']=time();
  $routes=require __DIR__.'/docs-catalog.php';
+ require_once __DIR__.'/docs-live.php';
  $sources=require __DIR__.'/docs-sources.php';
  require_once __DIR__.'/docs-provenance.php';
  $groups=array_values(array_unique(array_column($routes,'group')));
  $requested=trim((string)($_GET['route']??''));
  $selected=null;foreach($routes as $route){if($route['method'].' '.$route['path']===$requested){$selected=$route;break;}}
  if(!$selected)$selected=$routes[0];
- docsRenderPage($routes,$groups,$selected,(string)$_SESSION['docs_csrf'],$sources,!isset($_GET['route']));
+ $live=null;
+ if($path==='/docs/preview'){
+   if($method!=='POST'){http_response_code(405);exit;}
+   if(!hash_equals((string)$_SESSION['docs_csrf'],(string)($_POST['csrf']??''))){http_response_code(403);exit;}
+   $selection=(string)($_POST['route']??'');
+   if(strlen($selection)>200){http_response_code(400);exit;}
+   try {
+     [$liveRoute,$livePath]=docsLiveEndpoint($routes,$selection,(string)($_POST['record_id']??''),(string)($_POST['limit']??'20'));
+     $selected=$liveRoute;
+     $live=docsLiveFetch($livePath);
+   }catch(InvalidArgumentException $exception){
+     $live=['status'=>400,'error'=>$exception->getMessage()];
+   }
+ }
+ docsRenderPage($routes,$groups,$selected,(string)$_SESSION['docs_csrf'],$sources,!isset($_GET['route'])&&$live===null,$live);
 }
 function docsHeader(string $title):void{
  header('Content-Type: text/html; charset=utf-8');
@@ -116,7 +131,7 @@ function docsRenderLogin(string $error,string $csrf):never{
  echo '<p class="login-foot">Alleen toegankelijk voor geautoriseerde beheerders. Je aanmeldgegevens worden niet in GitHub opgeslagen.</p>';
  echo '</section><aside class="login-art"><div class="hero-tex" aria-hidden="true"></div><div class="hero-stripes" aria-hidden="true"></div><div class="pulse" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="login-art-inner"><span class="live-pill"><span class="live-dot"></span> A-ALERTS DEVELOPER</span><img class="login-art-logo" src="/images/website/aalerts-icon-512.png" alt="" width="148" height="148"><h2>Elke melding.<br><span>Direct</span> live.</h2><p>De complete A-Alerts API.<br>Alle bronnen. Eén platform.</p><div class="hero-status"><span class="live-dot"></span> Privé toegang · api.a-alerts.nl</div></div></aside></div></body></html>';exit;
 }
-function docsRenderPage(array $routes,array $groups,array $selected,string $csrf,array $sources,bool $overview=false):never{
+function docsRenderPage(array $routes,array $groups,array $selected,string $csrf,array $sources,bool $overview=false,?array $live=null):never{
  $routeKey=$selected['method'].' '.$selected['path'];
  docsHeader('API Referentie');
  echo '<div class="app-shell"><aside class="sidebar" id="docs-nav">';
@@ -143,6 +158,7 @@ function docsRenderPage(array $routes,array $groups,array $selected,string $csrf
  echo '<div class="endpoint-head"><span class="verb verb-'.strtolower($selected['method']).'">'.docsSafe($selected['method']).'</span><span class="impl impl-'.docsSafe($selected['status']).'">'.(['supported'=>'Beschikbaar','partial'=>'Deels gebouwd','planned'=>'Nog niet beschikbaar'][$selected['status']]??'Onbekend').'</span></div>';
  echo '<h2>'.docsSafe($selected['title']).'</h2><p class="endpoint-desc">'.docsSafe($selected['description']).'</p>';
  docsRenderEndpointSources($selected,$sources);
+ docsRenderLiveViewer($selected,$csrf,$live);
  echo '<div class="path-bar"><code>'.docsSafe($selected['method'].' https://api.a-alerts.nl'.$selected['path']).'</code></div>';
  echo '<section class="section"><h3>Authenticatie</h3><p>Alle private endpoints vereisen <code>Authorization: Bearer &lt;API_TOKEN&gt;</code>. Beheerroutes vereisen daarnaast de juiste beheerdersrol. De docs-login is een afzonderlijk account en geeft zelf geen API-toegang.</p></section>';
  if(!empty($selected['query'])){echo '<section class="section"><h3>Queryparameters</h3><table><thead><tr><th>Naam</th><th>Betekenis</th></tr></thead><tbody>';
@@ -199,4 +215,35 @@ function docsRenderEndpointSources(array $endpoint,array $sources):void {
   echo '</div>';
  }
  echo '</section>';
+}
+
+function docsRenderLiveViewer(array $selected,string $csrf,?array $live):void{
+  $key=$selected['method'].' '.$selected['path'];
+  $eligible=$selected['method']==='GET'&&str_starts_with($selected['path'],'/v1/')&&!str_starts_with($selected['path'],'/v1/beheer/');
+  echo '<section class="docs-live" id="live-json"><div class="docs-live-heading"><div><span class="eyebrow">LIVE API / READ-ONLY</span><h3>Bekijk echte JSON</h3>';
+  echo '<p>De API-aanvraag wordt op de server uitgevoerd met je bestaande READ_TOKEN. Het token verschijnt nooit in je browser of URL.</p></div></div>';
+  if($eligible){
+    echo '<form class="docs-live-form" method="post" action="/docs/preview#live-json">';
+    echo '<input type="hidden" name="csrf" value="'.docsSafe($csrf).'"><input type="hidden" name="route" value="'.docsSafe($key).'">';
+    if(str_contains($selected['path'],'{')){
+      echo '<label for="docs-record">Record- of toestel-ID<input id="docs-record" name="record_id" maxlength="80" required placeholder="Bijv. een ID uit de lijst" autocomplete="off"></label>';
+    }
+    if(isset($selected['query']['limit'])){
+      echo '<label for="docs-limit">Maximaal aantal<select id="docs-limit" name="limit"><option value="10">10</option><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option></select></label>';
+    }
+    echo '<button class="docs-live-button" type="submit">Bekijk live JSON ↗</button></form>';
+  }else{
+    echo '<p class="docs-live-unavailable">Alleen gedocumenteerde lees-endpoints (GET) zijn beschikbaar in deze viewer. Wijzigingen en beheerroutes zijn uitgesloten.</p>';
+  }
+  if($live!==null){
+    $status=(int)($live['status']??0);
+    $kind=$status>=200&&$status<300?'success':'failure';
+    echo '<div class="docs-live-result"><div class="docs-live-result-head"><strong>HTTP '.docsSafe((string)$status).'</strong>';
+    echo '<span class="docs-live-result-'.$kind.'">'.($kind==='success'?'Antwoord ontvangen':'Niet gelukt').'</span></div>';
+    if(isset($live['path']))echo '<div class="docs-live-path">GET '.docsSafe((string)$live['path']).'</div>';
+    if(isset($live['error']))echo '<p role="alert">'.docsSafe((string)$live['error']).'</p>';
+    else echo '<pre><code>'.docsSafe((string)($live['body']??'')).'</code></pre>';
+    echo '</div>';
+  }
+  echo '</section>';
 }
