@@ -1,0 +1,13 @@
+name: Helikopters eigen API (alleen lezen)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: |
+          for i in 1 2 3; do curl -s --max-time 20 https://api.a-alerts.nl/v1/helikopters | python3 -c "import json,sys;d=json.load(sys.stdin);print('EIGEN fout',d.get('fout'),'verouderd',d.get('verouderd'),'heli',len(d.get('helikopters',[])),'lucht',len(d.get('lucht',[])),'bijgewerkt',d.get('bijgewerkt'))"; sleep 15; done
+          curl -s --max-time 20 -o /dev/null -w "ADSB_RUNNER %{http_code}\n" https://api.adsb.lol/v2/point/52.2/5.4/160
