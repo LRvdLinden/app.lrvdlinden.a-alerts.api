@@ -140,8 +140,11 @@ function aaBurgernetPaginas(int $now, array $actief): array {
   $q->execute([$now-2*86400000]); $ids=$actief;
   foreach($q->fetchAll() as $r){ $id=preg_replace('/^burgernet:/','',$r['id']); if(!preg_match('/^\d{4,}$/',$id)||in_array($id,$ids,true))continue;
     if($r['status']==='actief')$ids[]=$id; elseif(!str_contains((string)$r['data'],'"berichten":['))$ids[]=$id; }
+  // Test mode: also the pages of the actions of the last week, to compare their timeline with what the Worker stored.
+  if(AaProef::$aan){ $q=aaDb()->prepare("SELECT id FROM waarschuwingen WHERE bron = 'burgernet' AND updated_at > ? ORDER BY updated_at DESC LIMIT 6"); $q->execute([$now-7*86400000]);
+    foreach($q->fetchAll(PDO::FETCH_COLUMN) as $id){ $id=preg_replace('/^burgernet:/','',$id); if(preg_match('/^\d{4,}$/',$id)&&!in_array($id,$ids,true))$ids[]=$id; } }
   $out=[];
-  foreach(array_slice($ids,0,4) as $id){ try{ $w=aaFromBurgernetSite((string)$id,aaBronFetch(AA_SOURCES['burgernetSite'].'/burgernet/'.$id,'text/html'),$now); if($w)$out[]=$w; }catch(Throwable){} }
+  foreach(array_slice($ids,0,AaProef::$aan?8:4) as $id){ try{ $w=aaFromBurgernetSite((string)$id,aaBronFetch(AA_SOURCES['burgernetSite'].'/burgernet/'.$id,'text/html'),$now); if($w)$out[]=$w; }catch(Throwable){} }
   return $out;
 }
 
@@ -218,6 +221,9 @@ function aaIngestWarnings(): array {
       };
       $gezien=[]; $actief=0;
       foreach(aaVnogLijst(aaBronJson(AA_VNOG_API_ACTIEF)) as $inc){ $w=$verwerk($inc); if($w){$gezien[$w['id']]=true; if($w['status']==='actief')$actief++;} }
+      // Test mode: also every incident VNOG still lists that is stored here (closed ones too), to compare more than the running ones.
+      if(AaProef::$aan){ $bekend=array_flip(aaDb()->query("SELECT id FROM waarschuwingen WHERE bron = 'vnog'")->fetchAll(PDO::FETCH_COLUMN));
+        foreach(aaVnogLijst(aaBronJson(AA_VNOG_API_ALLES)) as $inc)if(isset($bekend['vnog:'.($inc['id']??'')])&&!isset($gezien['vnog:'.$inc['id']]))$verwerk($inc); }
       $weg=array_values(array_filter(aaDb()->query("SELECT id FROM waarschuwingen WHERE bron = 'vnog' AND status = 'actief'")->fetchAll(PDO::FETCH_COLUMN),fn($id)=>!isset($gezien[$id])));
       if($weg){ $alles=aaVnogLijst(aaBronJson(AA_VNOG_API_ALLES));
         foreach($weg as $id){ $inc=null; foreach($alles as $i)if('vnog:'.($i['id']??'')===$id){$inc=$i;break;}
