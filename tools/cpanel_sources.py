@@ -25,6 +25,9 @@ names=["P2000_PAGE_API_URL","VERKEER_URL","VERKEER_TOKEN","ADSB_LOL_API_KEY"]
 data={key:os.getenv(key,"").strip() for key in names}
 # Never include unconfigured secrets as an empty override of the main config.
 data={key:value for key,value in data.items() if value}
+# Not secret: the own client identity of this server for the Koyeb P2000 stream (format homey-<24 hex>-<app id>).
+# Deliberately different from the identity of the Cloudflare Worker, so the two connections never replace each other.
+data["KOYEB_SUBPROTOCOL"]=os.getenv("KOYEB_SUBPROTOCOL","").strip() or "homey-a11ea1eaa11ea1eaa11ea1eb-nl.lrvdlinden.p2000"
 if not data:
  print("SOURCE_SECRETS_MISSING: configure at least one named source secret");sys.exit(0)
 for key in ("P2000_PAGE_API_URL","VERKEER_URL"):

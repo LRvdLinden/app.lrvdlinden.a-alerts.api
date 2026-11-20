@@ -199,6 +199,8 @@ try{
      runCollector($db,'worker.verkeer','verkeer',fn()=>$list($get('/v1/verkeer'),['items','gepland','flitsers']));
      runCollector($db,'worker.status','snapshot',function()use($get){foreach(['/v1/status','/v1/helikopters/status','/v1/radar'] as $r)$get($r);return [];});
    }
+   // History from before the own intake began: copied once into the engine's own tables.
+   try{ require_once __DIR__.'/aa/import.php'; aaEnsureSchema($db); $i=aaImportUitSpiegel(); if($i)echo "import meldingen=$i\n"; }catch(Throwable $e){ error_log('[aa import] '.$e->getMessage()); }
    if($minute===7){
      runCollector($db,'worker.vast','snapshot',function()use($get){foreach(['/v1/locaties','/v1/app','/v1/veiligheidsregio','/v1/changelog'] as $r)$get($r);return [];});
    }

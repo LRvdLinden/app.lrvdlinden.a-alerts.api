@@ -60,7 +60,7 @@ function apiRoute(string $path): bool {
   $routes=['meldingen'=>'p2000','nieuws'=>'nieuws','waarschuwingen'=>'waarschuwingen','verkeer'=>'verkeer','helikopters'=>'helikopters','lucht'=>'lucht'];
   $endpoint=trim(substr($path,4),'/');
   $first=explode('/',$endpoint)[0]??'';
-  if(!in_array($first,array_merge(array_keys($routes),['status','bronnen','vergelijk','spiegel']),true))return false;
+  if(!in_array($first,array_merge(array_keys($routes),['status','bronnen','vergelijk','spiegel','eigen']),true))return false;
   // All private routes fail closed even before cPanel configuration.
   if(!privateTokenValid())privateReply(401,['error'=>'unauthorized']);
   if(($_SERVER['REQUEST_METHOD']??'GET')!=='GET')privateReply(405,['error'=>'method_not_allowed']);
@@ -71,6 +71,30 @@ function apiRoute(string $path): bool {
       // Separate count query avoids ambiguous GROUP_CONCAT null handling.
       $rows=$db->query('SELECT source, MAX(finished_at) AS updated_at, SUM(ok=1) AS successful_runs, COUNT(*) AS total_runs FROM api_collector_runs GROUP BY source')->fetchAll();
       privateReply(200,['shadow'=>true,'collectors'=>$rows,'database'=>true]);
+    }
+    // The own engine: what came in through the own intake, and what the Worker has that the own intake missed.
+    if($first==='eigen'){
+      require_once __DIR__.'/aa/meldingen.php';
+      aaEnsureSchema($db);
+      $kv=[];foreach(['koyeb_last_connected','koyeb_last_message','koyeb_last_added','koyeb_last_error','koyeb_last_error_text','koyeb_run','aa_koyeb_start','aa_import'] as $k){$v=aaKvGet($k);$kv[$k]=$v===null?null:(is_numeric($v)&&strlen($v)>=12?aaIso((int)$v):(json_decode($v,true)??$v));}
+      $start=(int)(aaKvGet('aa_koyeb_start')??0);
+      $per=$db->query('SELECT COALESCE(bron,"onbekend") AS bron, COUNT(*) AS n, MAX(datum) AS laatste FROM meldingen GROUP BY bron')->fetchAll();
+      foreach($per as &$r){$r['n']=(int)$r['n'];$r['laatste']=$r['laatste']?aaIso((int)$r['laatste']):null;} unset($r);
+      $mist=[];$spiegel=0;
+      if($start){
+        // Worker alerts since the own intake started that are not in the own table (by guid or by the same dispatch).
+        $q=$db->query("SELECT payload FROM api_events WHERE kind='p2000' AND source LIKE 'worker.%'");
+        $own=$db->prepare('SELECT guid, datum, stad, dienst, full_melding, title, capcode FROM meldingen WHERE guid = ? OR (datum BETWEEN ? AND ? AND stad = ?)');
+        foreach($q as $row){$x=json_decode((string)$row['payload'],true);if(!is_array($x))continue;$d=aaMs($x['datum_tijd']??null);if($d===null||$d<$start+60000)continue;
+          $spiegel++; $x['datum']=$d; $own->execute([$x['guid'],$d-120000,$d+120000,$x['stad']??'']);
+          $ok=false;foreach($own->fetchAll() as $o){if($o['guid']===$x['guid']||aaSameDispatch($x,$o)){$ok=true;break;}}
+          if(!$ok&&count($mist)<20)$mist[]=['guid'=>$x['guid'],'datum_tijd'=>$x['datum_tijd'],'dienst'=>$x['dienst']??null,'stad'=>$x['stad']??null,'title'=>$x['title']??null];
+          elseif(!$ok)$mist[]=null;
+        }
+      }
+      $missing=count($mist);
+      privateReply(200,['shadow'=>true,'p2000'=>['intake'=>$kv,'per_bron'=>$per,'worker_sinds_start'=>$spiegel,'ontbreekt_bij_eigen'=>$missing,
+        'voorbeelden_ontbrekend'=>array_values(array_filter($mist)),'push'=>setting('PUSH_ACTIEF')==='1'?'aan':'uit (de Worker verstuurt de pushmeldingen)']]);
     }
     // Exact last answer of a Worker route, as stored by the mirror ("spiegel/meldingen", "spiegel/helikopters/status").
     if($first==='spiegel'){
