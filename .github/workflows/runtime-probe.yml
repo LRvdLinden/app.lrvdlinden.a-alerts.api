@@ -1,0 +1,15 @@
+name: Runtimes op de hosting (eenmalig, tijdelijke cron)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          VIMEXX_CPANEL_USERNAME: ${{ secrets.VIMEXX_CPANEL_USERNAME }}
+          VIMEXX_CPANEL_API_TOKEN: ${{ secrets.VIMEXX_CPANEL_API_TOKEN }}
+        run: python3 tools/cpanel_runtime_probe.py
