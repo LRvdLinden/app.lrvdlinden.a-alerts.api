@@ -29,7 +29,7 @@ if not isinstance(known,list):raise RuntimeError("CRON_LIST_UNEXPECTED")
 existing=[str(x.get("command","")) for x in known if isinstance(x,dict)]
 jobs=[
  ("p2000","*", "*/1"),("alerts","*", "*/5"),("air","*", "*/5"),
- ("traffic","*", "*/5"),("news","*", "*/15"),("reference","*", "*/15"),("worker","*", "*/1"),("koyeb","*", "*/1"),("d1","*", "*/1")]
+ ("traffic","*", "*/5"),("news","*", "*/15"),("reference","*", "*/15"),("worker","*", "*/1"),("koyeb","*", "*/1"),("d1","*", "*/1"),("bronnen","*", "*/1")]
 # Aircraft (positions, status, call-outs) and traffic of the own engine.
 jobs+=[("heli","*", "*/1"),("verkeer","*", "*/1")]
 # Status (minute bars, website check, beheer pushes) and the push outbox (sends only when PUSH_ACTIEF is "1").

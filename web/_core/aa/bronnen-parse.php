@@ -6,6 +6,7 @@ declare(strict_types=1);
  * one to one so that ids, texts and fields are the same as those of the Worker.
  */
 require_once __DIR__.'/base.php';
+require_once __DIR__.'/waarschuwingen.php';
 
 // ------------------------------------------------------------------ JS helpers
 /** JSON.stringify: whole numbers without ".0", no escaped slashes, unicode or line separators. */
@@ -37,7 +38,13 @@ function aaAmsterdamTime(mixed $dmy, mixed $hm='12:00'): ?int {
   [$d,$m,$y]=array_pad($p,3,0);
   $q=explode(':',(string)(($hm===null||$hm==='')?'12:00':$hm)); $h=is_numeric($q[0]??'')?(int)$q[0]:0; $mi=is_numeric($q[1]??'')?(int)$q[1]:0;
   if(!$y||!$m||!$d)return null;
-  return aaAmsMs($y,$m,$d,$h,$mi);
+  // Exactly the arithmetic of the Worker (also for a time that does not exist during the switch to summer time).
+  $guess=gmmktime($h,$mi,0,$m,$d,$y)*1000;
+  $loc=(new DateTimeImmutable('@'.intdiv($guess,1000)))->setTimezone(new DateTimeZone('Europe/Amsterdam'));
+  $gd=(int)gmdate('j',intdiv($guess,1000)); $ld=(int)$loc->format('j');
+  $diff=((int)$loc->format('G')*60+(int)$loc->format('i'))-($h*60+$mi);
+  if($ld!==$gd)$diff+=($ld>$gd||($ld===1&&$gd>27))?1440:-1440;
+  return $guess-$diff*60000;
 }
 /** Date.parse for the formats of the sources (ISO, RFC 2822); null for NaN. */
 function aaDateParse(mixed $s): ?int { if($s===null||$s==='')return null; if(is_int($s)||is_float($s))return null; return aaMs((string)$s); }
@@ -478,7 +485,10 @@ const AA_CATEGORIEEN=[['vermist','/\b(vermist|vermiste|vermissing)\b/iu'],
 function aaCategorieVan(mixed $t): string { foreach(AA_CATEGORIEEN as [$c,$re])if(preg_match($re,(string)($t??'')))return $c; return 'algemeen'; }
 function aaPolitieTijd(mixed $s): ?int {
   if(!preg_match('/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/',(string)($s??''),$m))return null;
-  return aaAmsMs((int)$m[1],(int)$m[2],(int)$m[3],(int)$m[4],(int)$m[5],(int)($m[6]??0));
+  $guess=gmmktime((int)$m[4],(int)$m[5],(int)($m[6]??0),(int)$m[2],(int)$m[3],(int)$m[1])*1000;
+  $l=(new DateTimeImmutable('@'.intdiv($guess,1000)))->setTimezone(new DateTimeZone('Europe/Amsterdam'));
+  $asLocal=gmmktime((int)$l->format('G'),(int)$l->format('i'),(int)$l->format('s'),(int)$l->format('n'),(int)$l->format('j'),(int)$l->format('Y'))*1000;
+  return $guess-($asLocal-$guess);
 }
 function aaPolitieItem(mixed $n): ?array {
   if(!is_array($n)||empty($n['titel'])||(empty($n['uid'])&&empty($n['url'])))return null;
