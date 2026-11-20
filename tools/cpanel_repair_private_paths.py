@@ -34,7 +34,10 @@ def api2_move(src,dest):
  if not isinstance(entries,list) or not entries or any(str(x.get("result"))!="1" for x in entries if isinstance(x,dict)):
   raise RuntimeError("cPanel did not confirm file move")
 # Determine account home from cPanel itself, never a user-provided URL or path.
-d=request(host+"/execute/DomainInfo/single_domain_data?domain=api.a-alerts.nl").get("result",{}).get("data",{})
+# UAPI answers with data at the top level; older proxies wrap it in "result". Reading only "result" gave an empty answer
+# (run 44697353191: "Account home unverified").
+_antwoord=request(host+"/execute/DomainInfo/single_domain_data?domain=api.a-alerts.nl")
+d=_antwoord.get("result",_antwoord).get("data",{})
 if isinstance(d,list):d=d[0] if d else {}
 if not isinstance(d,dict):raise RuntimeError("Domain information unavailable")
 root=str(d.get("documentroot") or d.get("document_root") or "")
