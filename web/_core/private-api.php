@@ -57,10 +57,10 @@ function privateTokenValid(): bool {
 }
 function apiRoute(string $path): bool {
   if(!str_starts_with($path,'/v1/'))return false;
-  $routes=['meldingen'=>'p2000','nieuws'=>'nieuws','waarschuwingen'=>'waarschuwingen','verkeer'=>'verkeer','helikopters'=>'helikopters','lucht'=>'helikopters'];
+  $routes=['meldingen'=>'p2000','nieuws'=>'nieuws','waarschuwingen'=>'waarschuwingen','verkeer'=>'verkeer','helikopters'=>'helikopters','lucht'=>'lucht'];
   $endpoint=trim(substr($path,4),'/');
   $first=explode('/',$endpoint)[0]??'';
-  if(!in_array($first,array_merge(array_keys($routes),['status','bronnen','vergelijk']),true))return false;
+  if(!in_array($first,array_merge(array_keys($routes),['status','bronnen','vergelijk','spiegel']),true))return false;
   // All private routes fail closed even before cPanel configuration.
   if(!privateTokenValid())privateReply(401,['error'=>'unauthorized']);
   if(($_SERVER['REQUEST_METHOD']??'GET')!=='GET')privateReply(405,['error'=>'method_not_allowed']);
@@ -72,17 +72,31 @@ function apiRoute(string $path): bool {
       $rows=$db->query('SELECT source, MAX(finished_at) AS updated_at, SUM(ok=1) AS successful_runs, COUNT(*) AS total_runs FROM api_collector_runs GROUP BY source')->fetchAll();
       privateReply(200,['shadow'=>true,'collectors'=>$rows,'database'=>true]);
     }
+    // Exact last answer of a Worker route, as stored by the mirror ("spiegel/meldingen", "spiegel/helikopters/status").
+    if($first==='spiegel'){
+      $name=substr($endpoint,8);
+      if($name===''){
+        $rows=$db->query("SELECT key_name,updated_at FROM api_kv WHERE key_name LIKE 'worker:%' ORDER BY key_name")->fetchAll();
+        privateReply(200,['shadow'=>true,'spiegel'=>array_map(static fn($r)=>['route'=>substr($r['key_name'],7),'bijgewerkt'=>$r['updated_at']],$rows)]);
+      }
+      if(!preg_match('#^[a-z0-9/-]{2,60}$#',$name))privateReply(400,['error'=>'invalid_route']);
+      $q=$db->prepare('SELECT value_json,updated_at FROM api_kv WHERE key_name=?');$q->execute(['worker:/v1/'.$name]);$row=$q->fetch();
+      if(!$row)privateReply(404,['error'=>'not_mirrored']);
+      $x=json_decode((string)$row['value_json'],true);
+      privateReply(200,['shadow'=>true,'route'=>'/v1/'.$name,'bijgewerkt'=>$row['updated_at'],'data'=>$x['data']??null]);
+    }
     if($endpoint==='vergelijk'){
       $groups=['meldingen'=>'p2000','nieuws'=>'nieuws','waarschuwingen'=>'waarschuwingen','verkeer'=>'verkeer','helikopters'=>'helikopters'];
       $result=[];foreach($groups as $key=>$g){
         $ref='reference_'.$key;
-        $own=$db->prepare('SELECT COUNT(*) FROM api_events WHERE kind=?');
+        $own=$db->prepare("SELECT COUNT(*) FROM api_events WHERE kind=? AND source NOT LIKE 'worker.%'");
         $own->execute([$g]);$ownCount=(int)$own->fetchColumn();
+        $mirror=$db->prepare("SELECT COUNT(*) FROM api_events WHERE kind=? AND source LIKE 'worker.%'");$mirror->execute([$g]);$mirrorCount=(int)$mirror->fetchColumn();
         $reference=$db->prepare('SELECT COUNT(*) FROM api_events WHERE kind=?');
         $reference->execute([$ref]);$refCount=(int)$reference->fetchColumn();
-        $missing=$db->prepare('SELECT COUNT(*) FROM api_events r LEFT JOIN api_events o ON o.kind=? AND o.external_id=r.external_id WHERE r.kind=? AND o.id IS NULL');
+        $missing=$db->prepare("SELECT COUNT(*) FROM api_events r LEFT JOIN api_events o ON o.kind=? AND o.external_id=r.external_id AND o.source LIKE 'worker.%' WHERE r.kind=? AND o.id IS NULL");
         $missing->execute([$g,$ref]);$missingCount=(int)$missing->fetchColumn();
-        $result[$key]=['eigen'=>$ownCount,'worker'=>$refCount,'ontbrekend_op_id'=>(int)$missingCount,'vergelijking'=>'indication_only'];
+        $result[$key]=['eigen'=>$ownCount,'spiegel'=>$mirrorCount,'worker'=>$refCount,'ontbrekend_in_spiegel'=>(int)$missingCount,'vergelijking'=>'indication_only'];
       }
       privateReply(200,['shadow'=>true,'vergelijking'=>$result,'parity'=>'unverified','note'=>'Different collection windows and IDs; full 1:1 field validation pending']);
     }
