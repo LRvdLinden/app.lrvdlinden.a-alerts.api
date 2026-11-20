@@ -24,7 +24,9 @@ const AA_D1_TABELLEN=['devices','device_prefs','device_install','admin_devices',
 const AA_D1_KLEIN=[5=>['waarschuwing_overrides','overrides'],
   15=>['devices','device_prefs','device_install','admin_devices','admin_prefs','status_incidenten','widget_blok','nieuws_updates','nieuws_liveblog','melding_routes']];
 /** Tables the own engine writes itself: rows of the Worker never replace own rows there. */
-const AA_D1_EIGEN_WINT=['meldingen','post_inzet'];
+// post_inzet: until the switch the Worker's row wins (which alert of an incident it saw first decides the time),
+// so the station figures stay exactly equal; the own intake still adds call-outs the Worker has not copied yet.
+const AA_D1_EIGEN_WINT=['meldingen'];
 
 function aaD1(string $sql, array $params=[]): array {
   static $db=null;
@@ -117,8 +119,7 @@ try{
         foreach(aaD1('SELECT id, hidden, foto FROM nieuws WHERE hidden = 1 OR foto IS NOT NULL OR updated_at > ?',[aaNow()-2*86400000]) as $r)$u->execute([(int)$r['hidden'],$r['foto'],$r['id'],(int)$r['hidden'],$r['foto']]);
         $max=(int)aaDb()->query('SELECT COALESCE(MAX(at),0) FROM nieuws_fotos')->fetchColumn();
         aaD1Schrijf('nieuws_fotos',aaD1('SELECT * FROM nieuws_fotos WHERE at > ?',[$max]));
-        $max=(int)aaDb()->query('SELECT COALESCE(MAX(at),0) FROM post_inzet')->fetchColumn();
-        aaD1Schrijf('post_inzet',aaD1('SELECT * FROM post_inzet WHERE at > ?',[$max-3600000]));
+        aaD1Schrijf('post_inzet',aaD1('SELECT * FROM post_inzet WHERE at > ?',[aaNow()-3*86400000]));
       }
       if($min===5){
         // Order of alerts with the same time: the rowid of the Worker for the alerts of the last hours.
