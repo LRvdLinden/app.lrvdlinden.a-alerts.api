@@ -86,6 +86,7 @@ function docsRoute(string $path):void {
  require_once __DIR__.'/docs-live.php';
  $sources=require __DIR__.'/docs-sources.php';
  require_once __DIR__.'/docs-provenance.php';
+ require_once __DIR__.'/docs-status.php';
  $groups=array_values(array_unique(array_column($routes,'group')));
  $requested=trim((string)($_GET['route']??''));
  $selected=null;foreach($routes as $route){if($route['method'].' '.$route['path']===$requested){$selected=$route;break;}}
@@ -110,11 +111,11 @@ function docsHeader(string $title):void{
  header('Content-Type: text/html; charset=utf-8');
  echo '<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
  echo '<meta name="robots" content="noindex,nofollow"><title>'.docsSafe($title).' — A-Alerts Developer</title>';
- echo '<link rel="icon" href="/images/website/aalerts-icon-32.png"><link rel="apple-touch-icon" href="/images/website/aalerts-icon-180.png"><meta name="theme-color" content="#cf0a1e"><link rel="stylesheet" href="/docs/style.css?v=3"><link rel="stylesheet" href="/docs/brand.css?v=5"></head><body>';
+ echo '<link rel="icon" href="/images/website/aalerts-icon-32.png"><link rel="apple-touch-icon" href="/images/website/aalerts-icon-180.png"><meta name="theme-color" content="#cf0a1e"><link rel="stylesheet" href="/docs/style.css?v=3"><link rel="stylesheet" href="/docs/brand.css?v=5"><link rel="stylesheet" href="/docs/status.css?v=1"></head><body>';
 }
 function docsBrand():void{
  echo '<a class="brand" href="/docs/" aria-label="A-Alerts API-documentatie">';
- echo '<span class="brand-logo"><img src="https://a-alerts.nl/assets/img/aalerts-icon-180.png" width="44" height="44" alt="A-Alerts logo"></span>';
+ echo '<span class="brand-logo"><img src="/images/website/aalerts-icon-180.png" width="44" height="44" alt="A-Alerts logo"></span>';
  echo '<span class="brand-copy"><strong>A-Alerts</strong><small>API DOCUMENTATIE</small></span></a>';
 }
 function docsRenderLogin(string $error,string $csrf):never{
@@ -136,7 +137,7 @@ function docsRenderPage(array $routes,array $groups,array $selected,string $csrf
  docsHeader('API Referentie');
  echo '<div class="app-shell"><aside class="sidebar" id="docs-nav">';
  docsBrand();
- echo '<div class="side-label">API DOCUMENTATIE</div><nav aria-label="API onderdelen"><a class="side-home" href="/docs">Bronnen & overzicht <span>↗</span></a>';
+ echo '<div class="side-label">API DOCUMENTATIE</div><p class="nav-legend"><span class="nav-state nav-state-eigen"></span> eigen motor <span class="nav-state nav-state-planned"></span> nog niet</p><nav aria-label="API onderdelen"><a class="side-home" href="/docs">Stand & overzicht <span>↗</span></a>';
  foreach($groups as $group){
   echo '<div class="nav-group"><h3>'.docsSafe($group).'</h3>';
   foreach($routes as $item){
@@ -144,51 +145,106 @@ function docsRenderPage(array $routes,array $groups,array $selected,string $csrf
    $key=$item['method'].' '.$item['path'];
    $href='/docs?route='.rawurlencode($key);
    $active=$routeKey===$key?' active':'';
-   echo '<a class="endpoint-nav'.$active.'" href="'.docsSafe($href).'"><span class="mini-method">'.docsSafe($item['method']).'</span><span>'.docsSafe($item['title']).'</span></a>';
+   $eng=docsRouteInEngine($item);
+   echo '<a class="endpoint-nav'.$active.'" href="'.docsSafe($href).'"><span class="mini-method">'.docsSafe($item['method']).'</span><span>'.docsSafe($item['title']).'</span><span class="nav-state nav-state-'.($eng?'eigen':docsSafe($item['status'])).'" title="'.($eng?'Draait in de eigen motor':'Nog niet in de eigen motor').'" aria-label="'.($eng?'Eigen motor':'Nog niet in de eigen motor').'"></span></a>';
   }
   echo '</div>';
  }
  echo '</nav></aside><main class="main"><div class="topbar"><div class="topbar-leading"><a href="#docs-nav" class="mobile-nav-link" aria-label="Ga naar endpointnavigatie">☰ <span>Endpoints</span></a><span><span class="status-dot"></span> API-v1 <span class="crumb">/ Documentatie</span></span></div>';
  echo '<form method="post" action="/docs/logout"><input type="hidden" name="csrf" value="'.docsSafe($csrf).'"><button class="logout">Uitloggen ↗</button></form></div>';
  echo '<div class="body-content"><p class="eyebrow">A-ALERTS / API REFERENCE</p><h1>Developer Documentation<span class="red-period">.</span></h1>';
- echo '<p class="intro">Ontdek alle endpoints, authenticatie, parameters en responses van de toekomstige zelfstandige A-Alerts API. De status toont wat nu werkt en wat nog migratie vereist.</p>';
- echo '<div class="overview-stats"><div><strong>'.count($routes).'</strong><span>Endpointvarianten</span></div><div><strong>'.count($groups).'</strong><span>API-onderdelen</span></div><div><strong>v1</strong><span>Parallelle API</span></div></div>';
- if($overview)docsRenderOverview($sources);
+ echo '<p class="intro">De eigen A-Alerts API op api.a-alerts.nl, los van Cloudflare. Hier zie je live wat er al zelfstandig draait, wat er binnenkomt en per route of hij in de eigen motor zit. De Worker op workers.dev blijft productie tot de overstap.</p>';
+ $inEngine=count(array_filter($routes,'docsRouteInEngine'));
+ echo '<div class="overview-stats"><div><strong>'.count($routes).'</strong><span>Routes in totaal</span></div><div><strong>'.$inEngine.'</strong><span>In de eigen motor</span></div><div><strong>'.(count($routes)-$inEngine).'</strong><span>Nog te bouwen</span></div></div>';
+ if($overview){docsRenderLiveStatus($routes);docsRenderOverview($sources);}
  echo '<div class="api-divider"></div>';
- echo '<div class="endpoint-head"><span class="verb verb-'.strtolower($selected['method']).'">'.docsSafe($selected['method']).'</span><span class="impl impl-'.docsSafe($selected['status']).'">'.(['supported'=>'Beschikbaar','partial'=>'Deels gebouwd','planned'=>'Nog niet beschikbaar'][$selected['status']]??'Onbekend').'</span></div>';
+ $engine=docsRouteInEngine($selected);
+ echo '<div class="endpoint-head"><span class="verb verb-'.strtolower($selected['method']).'">'.docsSafe($selected['method']).'</span>';
+ echo $engine?'<span class="impl impl-supported">Eigen motor · draait op deze server</span>':'<span class="impl impl-'.docsSafe($selected['status']).'">'.(['supported'=>'Beschikbaar','partial'=>'Nog via oude keten','planned'=>'Nog niet gebouwd'][$selected['status']]??'Onbekend').'</span>';
+ echo '</div>';
  echo '<h2>'.docsSafe($selected['title']).'</h2><p class="endpoint-desc">'.docsSafe($selected['description']).'</p>';
  docsRenderEndpointSources($selected,$sources);
  docsRenderLiveViewer($selected,$csrf,$live);
  echo '<div class="path-bar"><code>'.docsSafe($selected['method'].' https://api.a-alerts.nl'.$selected['path']).'</code></div>';
- echo '<section class="section"><h3>Authenticatie</h3><p>Alle private endpoints vereisen <code>Authorization: Bearer &lt;API_TOKEN&gt;</code>. Beheerroutes vereisen daarnaast de juiste beheerdersrol. De docs-login is een afzonderlijk account en geeft zelf geen API-toegang.</p></section>';
+ $private=docsRoutePrivate($selected);
+ echo '<section class="section"><h3>Authenticatie</h3><p>'.($private?'Deze route vereist <code>Authorization: Bearer &lt;API_TOKEN&gt;</code>'.(str_starts_with($selected['path'],'/v1/beheer/')?' met beheerrechten':'').'.':'Openbare route, net als op workers.dev: geen token nodig.').' De docs-login is een apart account en geeft zelf geen API-toegang.</p></section>';
  if(!empty($selected['query'])){echo '<section class="section"><h3>Queryparameters</h3><table><thead><tr><th>Naam</th><th>Betekenis</th></tr></thead><tbody>';
  foreach($selected['query'] as $key=>$meaning)echo '<tr><td><code>'.docsSafe($key).'</code></td><td>'.docsSafe($meaning).'</td></tr>';
  echo '</tbody></table></section>';}
  $samplePath=preg_replace('/\{[^}]+\}/','voorbeeld-id',$selected['path']);
  $method=$selected['method'];$query=empty($selected['query'])?'':'?limit=20';
- $curl="curl -i -X ".$method." \\\n  -H 'Authorization: Bearer <API_TOKEN>' \\\n  -H 'Accept: application/json' \\\n  'https://api.a-alerts.nl".$samplePath.$query."'";
+ $curl="curl -i -X ".$method." \\\n".($private?"  -H 'Authorization: Bearer <API_TOKEN>' \\\n":'')."  -H 'Accept: application/json' \\\n  'https://api.a-alerts.nl".$samplePath.$query."'";
  echo '<section class="section"><h3>Voorbeeldrequest</h3><pre><code>'.docsSafe($curl).'</code></pre></section>';
  $example=$selected['example']??['error'=>$selected['status']==='planned'?'feature_not_yet_available':'example_response','note'=>'Illustratief; contract nog niet gevalideerd'];
  echo '<section class="section"><h3>Voorbeeldresponse</h3><pre><code>'.docsSafe(json_encode($example,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)).'</code></pre></section>';
  echo '<section class="section"><h3>HTTP-responsen</h3><div class="response-list"><div><code>200</code> Geslaagd — indien geïmplementeerd en ingericht</div><div><code>401</code> Ontbrekend of ongeldig Bearer-token</div><div><code>403</code> Onvoldoende rechten</div><div><code>404</code> Record niet gevonden</div><div><code>503</code> Bron of onderdeel niet beschikbaar</div></div></section>';
- echo '<p class="disclaimer">Let op: de catalogus beschrijft ook bestaande Worker-contracten die nog niet volledig naar PHP/MySQL zijn gemigreerd. Een voorbeeldresponse is geen live-resultaat.</p>';
+ echo '<p class="disclaimer">“Eigen motor” betekent dat de route op deze server in PHP/MariaDB draait. Of het antwoord exact gelijk is aan workers.dev, controleert de vergelijkingsworkflow in GitHub. Een voorbeeldresponse is geen live-resultaat; gebruik daarvoor de live-viewer.</p>';
  echo '</div><footer>© A-Alerts · Private Developer Portal · <a href="https://a-alerts.nl">a-alerts.nl</a></footer></main></div></body></html>';exit;
 }
 
+function docsStateLabel(string $s): string {
+ return ['live'=>'Zelfstandig · live','overname'=>'Via overname Worker','deels'=>'Deels gebouwd','gepland'=>'Nog te bouwen','fout'=>'Storing','uit'=>'Bewust uit'][$s]??$s;
+}
+function docsRoutePrivate(array $r): bool {
+ $p=(string)$r['path'];
+ return str_starts_with($p,'/v1/beheer/')||in_array($p,['/v1/eigen','/v1/bronnen','/v1/vergelijk','/v1/spiegel','/v1/spiegel/{route}'],true);
+}
+function docsRenderLiveStatus(array $routes):void {
+ $st=docsLiveState();
+ echo '<section class="live-state" id="stand"><div class="docs-section-heading"><span class="eyebrow">LIVE · STAND VAN DE EIGEN API</span><h2>Wat draait er al zelfstandig?</h2>';
+ echo '<p>Alles hieronder komt rechtstreeks uit de database en de bestanden op deze server, bij elk bezoek opnieuw. Iets staat alleen op “Zelfstandig · live” als er een recent teken van leven is.</p></div>';
+ if(!$st['db']){echo '<p class="state-error" role="alert">'.docsSafe((string)$st['fout']).'</p></section>';return;}
+ echo '<div class="state-steps">';
+ foreach($st['onderdelen'] as $i=>$o){
+  echo '<div class="state-step state-'.docsSafe($o['staat']).'"><span class="state-num">'.($i+1).'</span><div><strong>'.docsSafe($o['naam']).'</strong><p>'.docsSafe($o['uitleg']).'</p></div><span class="state-pill state-pill-'.docsSafe($o['staat']).'">'.docsSafe(docsStateLabel($o['staat'])).'</span></div>';
+ }
+ echo '</div>';
+ echo '<div class="docs-section-heading"><span class="eyebrow">LIVE · INNAME</span><h2>Wat komt er binnen?</h2><p>Per bron: de laatste ontvangst en waar de gegevens nu vandaan komen.</p></div><div class="state-sources">';
+ foreach($st['bronnen'] as $b){
+  echo '<article class="state-source state-'.docsSafe($b['staat']).'"><img src="'.docsSafe($b['icoon']).'" width="40" height="40" alt="" loading="lazy"><div class="state-source-body"><div class="state-source-head"><strong>'.docsSafe($b['naam']).'</strong>';
+  echo '<span class="state-pill state-pill-'.docsSafe($b['staat']).'">'.docsSafe(docsStateLabel($b['staat'])).'</span></div>';
+  echo '<p>'.docsSafe($b['detail']).'</p><small>Laatste activiteit: '.docsSafe(docsAgo($b['laatst'])).'</small></div></article>';
+ }
+ echo '</div>';
+ echo '<div class="state-columns"><div><div class="docs-section-heading"><span class="eyebrow">LIVE · DATABASE</span><h2>Opgeslagen gegevens</h2></div><table class="state-table"><thead><tr><th>Gegevens</th><th>Aantal</th></tr></thead><tbody>';
+ foreach($st['tabellen'] as $t)echo '<tr><td>'.docsSafe($t['label']).' <code>'.docsSafe($t['tabel']).'</code></td><td>'.($t['aantal']===null?'—':number_format($t['aantal'],0,',','.')).'</td></tr>';
+ echo '</tbody></table></div><div><div class="docs-section-heading"><span class="eyebrow">LIVE · CONFIGURATIE</span><h2>Sleutels aanwezig</h2></div><p class="state-note">Alleen of een sleutel is ingesteld; waarden worden nooit getoond.</p><ul class="state-config">';
+ foreach($st['config'] as $c)echo '<li class="'.($c['aanwezig']?'is-set':'is-missing').'"><span aria-hidden="true">'.($c['aanwezig']?'✓':'–').'</span> '.docsSafe($c['label']).'<span class="sr-only">'.($c['aanwezig']?' ingesteld':' ontbreekt').'</span></li>';
+ echo '</ul></div></div>';
+ $groups=[];foreach($routes as $r){$g=$r['group'];$groups[$g]??=['n'=>0,'eigen'=>0];$groups[$g]['n']++;if(docsRouteInEngine($r))$groups[$g]['eigen']++;}
+ echo '<div class="docs-section-heading"><span class="eyebrow">LIVE · ROUTES</span><h2>Routes per onderdeel</h2><p>Hoeveel routes van de Worker al in de eigen motor op deze server zitten.</p></div><div class="state-groups">';
+ foreach($groups as $g=>$c){$pct=$c['n']?round($c['eigen']/$c['n']*100):0;
+  echo '<div class="state-group"><div class="state-group-head"><strong>'.docsSafe($g).'</strong><span>'.$c['eigen'].' / '.$c['n'].'</span></div><progress class="state-bar" max="'.max(1,$c['n']).'" value="'.$c['eigen'].'" aria-label="'.$pct.' procent in de eigen motor">'.$pct.'%</progress></div>';}
+ echo '</div></section>';
+}
+/** Live state for a source of the herkomst catalog (same data as the overview), or null when there is no live check. */
+function docsSourceLive(string $key): ?array {
+ static $st=null; if($st===null){ try{ $st=docsLiveState(); }catch(Throwable){ $st=['bronnen'=>[]]; } }
+ $map=['p2000'=>'p2000page','koyeb_p2000'=>'p2000','worker'=>'spiegel','nlalert'=>'nlalert','burgernet'=>'burgernet','amber'=>'amber','knmi'=>'knmi','vnog'=>'vnog',
+  'politie'=>'nieuws-politie','nieuws112'=>'nieuws-regionaal','adsb'=>'adsb','ndw'=>'verkeer','weatherkit'=>'apple','applemaps'=>'apple','mapkit'=>'apple','apns'=>'push','fcm'=>'push'];
+ $id=$map[$key]??null; if(!$id)return null;
+ foreach($st['bronnen']??[] as $b)if($b['id']===$id)return $b;
+ return null;
+}
+function docsSourceStatusHtml(string $key,array $item): string {
+ $b=docsSourceLive($key);
+ if(!$b)return docsSafe((string)$item['status']);
+ return '<span class="state-pill state-pill-'.docsSafe($b['staat']).'">'.docsSafe(docsStateLabel($b['staat'])).'</span><br><span>'.docsSafe($b['detail']).'</span>';
+}
 function docsRenderOverview(array $sources):void {
- echo '<section class="source-overview" id="bronnen"><div class="docs-section-heading"><span class="eyebrow">GEGEVENSHERKOMST</span><h2>Alle bronnen en systemen.</h2>';
- echo '<p>De herkomst van alle meldingen, waarschuwingen, nieuwsberichten, luchtvaart, kaarten en notificaties. De vermelde bron is niet automatisch al actief in de eigen PHP-API.</p></div>';
- echo '<div class="source-table-wrap"><table class="source-table"><thead><tr><th>Bron of dienst</th><th>Waarvoor gebruikt A-Alerts deze?</th><th>PHP-migratiestatus</th></tr></thead><tbody>';
- foreach($sources as $item){
+ echo '<section class="source-overview" id="bronnen"><div class="docs-section-heading"><span class="eyebrow">GEGEVENSHERKOMST</span><h2>Herkomst van alle gegevens.</h2>';
+ echo '<p>Waar elk soort gegeven oorspronkelijk vandaan komt. De live stand per bron staat hierboven onder “Wat komt er binnen?”.</p></div>';
+ echo '<div class="source-table-wrap"><table class="source-table"><thead><tr><th>Bron of dienst</th><th>Waarvoor gebruikt A-Alerts deze?</th><th>Toelichting</th></tr></thead><tbody>';
+ foreach($sources as $key=>$item){
   $image=(string)($item['image']??'');
   echo '<tr><td><div class="source-cell">';
   if($image!=='')echo '<img class="source-thumbnail" src="'.docsSafe($image).'" width="42" height="42" loading="lazy" alt="">';
   echo '<div><strong>'.docsSafe((string)$item['name']).'</strong><small>'.docsSafe((string)$item['type']).'</small>';
   if(!empty($item['url']))echo '<a href="'.docsSafe((string)$item['url']).'" target="_blank" rel="noopener noreferrer">Bronwebsite ↗</a>';
-  echo '</div></div></td><td>'.docsSafe((string)$item['role']).'</td><td class="source-status">'.docsSafe((string)$item['status']).'</td></tr>';
+  echo '</div></div></td><td>'.docsSafe((string)$item['role']).'</td><td class="source-status">'.docsSourceStatusHtml((string)$key,$item).'</td></tr>';
  }
  echo '</tbody></table></div>';
- echo '<p class="source-note">De bestaande Cloudflare Worker is de productie-referentie; de nieuwe PHP/MySQL-keten is nog niet voor alle bronnen functioneel gelijkwaardig.</p></section>';
+ echo '<p class="source-note">De Cloudflare Worker blijft productie tot de overstap; daarna draait alles via api.a-alerts.nl.</p></section>';
 }
 function docsRenderEndpointSources(array $endpoint,array $sources):void {
  $refs=docsSourceIds($endpoint);
@@ -200,11 +256,11 @@ function docsRenderEndpointSources(array $endpoint,array $sources):void {
    echo '<div class="endpoint-source-card">';
    if($img!=='')echo '<img src="'.docsSafe($img).'" width="42" height="42" loading="lazy" alt="">';
    echo '<div><strong>'.docsSafe((string)$item['name']).'</strong><p>'.docsSafe((string)$item['role']).'</p>';
-   echo '<small>'.docsSafe((string)$item['status']).'</small>';
+   echo '<small>'.docsSourceStatusHtml((string)$key,$item).'</small>';
    if(!empty($item['url']))echo '<a href="'.docsSafe((string)$item['url']).'" target="_blank" rel="noopener noreferrer">Externe bron ↗</a>';
    echo '</div></div>';
  }
- echo '</div><p class="source-note">Getoonde bronnen zijn de beoogde gegevensketen of huidige Worker-herkomst; dit is geen bevestiging van live ontvangst in PHP.</p>';
+ echo '</div><p class="source-note">De herkomst van de gegevens; de live stand per bron staat op de overzichtspagina.</p>';
  $media=docsMediaFor($endpoint);
  if($media){
   echo '<h4>Bijbehorende A-Alerts-afbeeldingen</h4><div class="endpoint-media">';
@@ -221,7 +277,7 @@ function docsRenderLiveViewer(array $selected,string $csrf,?array $live):void{
   $key=$selected['method'].' '.$selected['path'];
   $eligible=$selected['method']==='GET'&&str_starts_with($selected['path'],'/v1/')&&!str_starts_with($selected['path'],'/v1/beheer/');
   echo '<section class="docs-live" id="live-json"><div class="docs-live-heading"><div><span class="eyebrow">LIVE API / READ-ONLY</span><h3>Bekijk echte JSON</h3>';
-  echo '<p>De API-aanvraag wordt op de server uitgevoerd met je bestaande READ_TOKEN. Het token verschijnt nooit in je browser of URL.</p></div></div>';
+  echo '<p>De aanvraag gaat vanaf de server naar api.a-alerts.nl; een eventueel token verschijnt nooit in je browser of URL.</p></div></div>';
   if($eligible){
     echo '<form class="docs-live-form" method="post" action="/docs/preview#live-json">';
     echo '<input type="hidden" name="csrf" value="'.docsSafe($csrf).'"><input type="hidden" name="route" value="'.docsSafe($key).'">';

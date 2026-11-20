@@ -13,7 +13,7 @@ AddDefaultCharset Off
   RewriteRule ^_core(/|$) - [F,L]
   RewriteRule ^_core/docs-auth\.local\.php$ - [F,L]
   # Only publicly served asset; all docs HTML goes through authenticated PHP.
-  RewriteRule ^docs/(style|brand)\.css$ - [L]
+  RewriteRule ^docs/(style|brand|status)\.css$ - [L]
   # Source-owned static image previews for authenticated docs pages.
   RewriteRule ^images/ - [L]
   RewriteRule ^ index.php [L]

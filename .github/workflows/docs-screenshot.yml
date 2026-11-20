@@ -1,0 +1,21 @@
+name: Schermafbeeldingen /docs (na inloggen)
+on:
+  workflow_dispatch:
+    inputs:
+      route: { description: "Optioneel: route-sleutel, bv. GET%20%2Fv1%2Fwaarschuwingen", required: false, default: "" }
+permissions:
+  contents: read
+jobs:
+  shots:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -q playwright==1.48.0 && python3 -m playwright install --with-deps chromium >/dev/null
+      - env:
+          AALERTS_DOCS_USERNAME: ${{ secrets.AALERTS_DOCS_USERNAME }}
+          AALERTS_DOCS_PASSWORD: ${{ secrets.AALERTS_DOCS_PASSWORD }}
+          DOCS_ROUTE: ${{ inputs.route }}
+        run: python3 tools/docs_screenshot.py
+      - uses: actions/upload-artifact@v4
+        with: { name: docs-shots, path: shots/, retention-days: 3 }

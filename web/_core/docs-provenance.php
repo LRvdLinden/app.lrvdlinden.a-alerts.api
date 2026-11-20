@@ -66,5 +66,11 @@ function docsMediaFor(array $endpoint):array {
   ['file'=>'/images/website/marker_ambulance.png','label'=>'Ambulancemarker'],
   ['file'=>'/images/website/marker_vnog.png','label'=>'VNOG-marker'],
  ];
+ if($group==='Verkeer')return [
+  ['file'=>'/images/website/verkeer_file.png','label'=>'File'],
+  ['file'=>'/images/website/verkeer_ongeval.png','label'=>'Ongeval'],
+  ['file'=>'/images/website/verkeer_werk.png','label'=>'Werkzaamheden'],
+  ['file'=>'/images/website/verkeer_flitser.png','label'=>'Flitser'],
+ ];
  return [['file'=>'/images/website/aalerts-icon-180.png','label'=>'A-Alerts']];
 }
