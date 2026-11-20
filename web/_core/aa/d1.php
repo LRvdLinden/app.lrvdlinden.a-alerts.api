@@ -20,7 +20,7 @@ const AA_D1_TABELLEN=['devices','device_prefs','device_install','admin_devices',
 /** Tables copied whole again until the switch, per interval in minutes (their own intake does not exist yet or they are
  * written by the apps and the beheer). Each run reads every row once: together well within the free D1 allowance. */
 const AA_D1_KLEIN=[5=>['waarschuwingen','waarschuwing_knmi','waarschuwing_overrides','overrides'],
-  15=>['devices','device_prefs','device_install','admin_devices','admin_prefs','status_incidenten','widget_blok','nieuws','nieuws_updates','nieuws_liveblog','nieuws_stockfoto']];
+  15=>['devices','device_prefs','device_install','admin_devices','admin_prefs','status_incidenten','widget_blok','nieuws','nieuws_updates','nieuws_liveblog','nieuws_stockfoto','melding_routes']];
 /** Tables the own engine writes itself: rows of the Worker never replace own rows there. */
 const AA_D1_EIGEN_WINT=['meldingen','post_inzet'];
 
