@@ -18,5 +18,7 @@ jobs:
         run: bash test/run.sh
       - name: Bronnormalisatie en gebiedsfiltering
         run: php test/normalize.php
+      - name: Beveiligde live JSON viewer
+        run: php test/docs-live.php
 # Deployment of api.a-alerts.nl uses deploy-cpanel.yml via HTTPS only.
 # Old FTPS deployment was retired to prevent concurrent conflicting uploads.
