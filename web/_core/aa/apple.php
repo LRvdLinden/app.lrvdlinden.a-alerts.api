@@ -7,9 +7,9 @@ declare(strict_types=1);
  */
 require_once __DIR__.'/meldingen.php';
 
-function aaB64url(string $s): string { return rtrim(strtr(base64_encode($s),'+/','-_'),'='); }
+if(!function_exists('aaB64url')){ function aaB64url(string $s): string { return rtrim(strtr(base64_encode($s),'+/','-_'),'='); } }
 /** GitHub/Cloudflare secrets may store the .p8 with literal "\n". */
-function aaPem(mixed $v): string { return trim(str_replace('\n',"\n",(string)($v??''))); }
+if(!function_exists('aaPem')){ function aaPem(mixed $v): string { return trim(str_replace('\n',"\n",(string)($v??''))); } }
 function aaHasKey(string $keyId, string $teamId, string $p8): bool { return $keyId!==''&&$teamId!==''&&str_contains(aaPem($p8),'PRIVATE KEY'); }
 /** DER ECDSA signature → raw r||s (64 bytes) as JWT and Apple expect. */
 function aaDerToRaw(string $der): string {

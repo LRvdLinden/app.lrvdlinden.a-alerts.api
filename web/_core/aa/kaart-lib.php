@@ -63,10 +63,12 @@ function aaRadarTile(int $z, int $x, int $y): never {
 const AA_MARKERS=['brandweer'=>['marker_brandweer.png',48,48,1.5],'ambulance'=>['marker_ambulance.png',48,48,1.5],'politie'=>['marker_politie.png',48,48,1.5],
   'traumaheli'=>['marker_traumaheli.png',48,48,1.5],'burgernet'=>['marker_burgernet.png',36,44,0],'nlalert'=>['marker_nlalert.png',36,44,0],
   'amber'=>['marker_amber.png',36,44,0],'vermistkind'=>['marker_vermistkind.png',36,44,0],'vnog'=>['marker_vnog2.png',36,44,0]];
-function aaPem(string $v): string { return trim(str_replace('\n',"\n",$v)); }
+// Same as aaPem in apple.php; guarded so both files can load in one request.
+if(!function_exists('aaPem')){ function aaPem(mixed $v): string { return trim(str_replace('\n',"\n",(string)($v??''))); } }
 function aaKaartKey(): array { return ['kid'=>setting('WEB_MAPKIT_JS_KEY_ID'),'tid'=>setting('WEB_MAPKIT_JS_TEAM_ID')?:setting('APN_TEAM_ID'),'p8'=>setting('WEB_MAPKIT_JS_P8')]; }
 function aaKaartConfigured(): bool { $k=aaKaartKey(); return $k['kid']!==''&&$k['tid']!==''&&str_contains(aaPem($k['p8']),'PRIVATE KEY'); }
-function aaB64Url(string $b): string { return rtrim(strtr(base64_encode($b),'+/','-_'),'='); }
+// PHP function names ignore case: aaB64url in apple.php is the same name, so declare it only once.
+if(!function_exists('aaB64Url')){ function aaB64Url(string $b): string { return rtrim(strtr(base64_encode($b),'+/','-_'),'='); } }
 /** ES256 over data; DER (openssl) converted to raw r||s as WebCrypto gives it. */
 function aaSignRawEs256(string $p8, string $data): string {
   $key=openssl_pkey_get_private(aaPem($p8)); if(!$key||!openssl_sign($data,$der,$key,OPENSSL_ALGO_SHA256))throw new RuntimeException('es256_sign');
