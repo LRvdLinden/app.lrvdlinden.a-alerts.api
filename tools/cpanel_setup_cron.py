@@ -32,6 +32,8 @@ jobs=[
  ("traffic","*", "*/5"),("news","*", "*/15"),("reference","*", "*/15"),("worker","*", "*/1"),("koyeb","*", "*/1"),("d1","*", "*/1")]
 # Aircraft (positions, status, call-outs) and traffic of the own engine.
 jobs+=[("heli","*", "*/1"),("verkeer","*", "*/1")]
+# Status (minute bars, website check, beheer pushes) and the push outbox (sends only when PUSH_ACTIEF is "1").
+jobs+=[("status","*", "*/1")]
 # Paused groups get no cron job and an existing one is removed. p2000: the p2000.page key is personal and limited to
 # a number of IP addresses; the production Worker polls it already, so a second poller from this server can lock it out.
 PAUSED={x for x in os.getenv("AALERTS_CRON_PAUSED","p2000").split(",") if x}

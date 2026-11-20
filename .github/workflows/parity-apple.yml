@@ -1,0 +1,17 @@
+name: Vergelijk Apple, toestellen, status en beheer (alleen lezen)
+on:
+  push:
+    branches: [main]
+    paths: ["tools/parity_apple.py", ".github/workflows/parity-apple.yml", "web/_core/aa/routes-apple.php"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wacht tot de uitrol klaar is
+        run: sleep 90
+      - run: python3 tools/parity_apple.py
