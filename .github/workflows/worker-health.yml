@@ -1,0 +1,13 @@
+name: Productie-Worker gezondheid (alleen lezen)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  health:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Lees /health van de Worker (alleen feedstatus)
+        run: |
+          curl -fsS --max-time 20 "/health" | python3 -c "import json,sys;d=json.load(sys.stdin);print('FEED',json.dumps(d.get('feed')));print('KOYEB',json.dumps(d.get('koyeb'))[:300])"
