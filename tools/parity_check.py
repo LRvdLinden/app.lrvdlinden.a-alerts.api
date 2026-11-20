@@ -40,6 +40,7 @@ def lijst(path,key="guid"):
  for k in ia.keys()&ib.keys():
   for d in diff(ia[k],ib[k]):velden[d.split("[")[0]]=velden.get(d.split("[")[0],0)+1
  print("  gelijk_op_id",len(ia.keys()&ib.keys()),"alleen_worker",len(alleen_w),"alleen_eigen",len(alleen_e))
+ print("  zelfde_volgorde",[x.get(key) for x in a]==[x.get(key) for x in b])
  for f,n in sorted(velden.items(),key=lambda x:-x[1])[:12]:print("  VELD_VERSCHIL",f,n)
  return a
 a=lijst("/v1/meldingen?limit=100")

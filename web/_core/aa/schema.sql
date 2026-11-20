@@ -132,3 +132,6 @@ CREATE TABLE IF NOT EXISTS widget_sites (site VARCHAR(191) NOT NULL PRIMARY KEY,
 CREATE TABLE IF NOT EXISTS widget_views (site VARCHAR(191) NOT NULL, dag VARCHAR(10) NOT NULL, n INT NOT NULL DEFAULT 0, PRIMARY KEY (site, dag)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS widget_blok (site VARCHAR(191) NOT NULL PRIMARY KEY, at BIGINT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS post_inzet (post VARCHAR(96) NOT NULL, incident VARCHAR(64) NOT NULL, at BIGINT NOT NULL, PRIMARY KEY (post, incident)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Order of rows with the same time, as the Worker database returns them (its rowid), then the own insert order.
+ALTER TABLE meldingen ADD COLUMN IF NOT EXISTS volgorde BIGINT NULL;
+ALTER TABLE waarschuwingen ADD COLUMN IF NOT EXISTS volgorde BIGINT NULL;

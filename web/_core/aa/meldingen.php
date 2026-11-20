@@ -33,8 +33,8 @@ function aaMeldingAPI(?array $row): ?array {
 function aaListMeldingen(mixed $limit=null, mixed $before=null): array {
   $lim=min(max((int)($limit?:300),1),1000);
   if($before!==null&&$before!==''){
-    $q=aaDb()->prepare(AA_SELECT.' WHERE COALESCE(o.hidden, 0) = 0 AND m.datum < ? ORDER BY m.datum DESC LIMIT '.$lim); $q->execute([aaMs($before)??0]);
-  }else{ $q=aaDb()->query(AA_SELECT.' WHERE COALESCE(o.hidden, 0) = 0 ORDER BY m.datum DESC LIMIT '.$lim); }
+    $q=aaDb()->prepare(AA_SELECT.' WHERE COALESCE(o.hidden, 0) = 0 AND m.datum < ? ORDER BY m.datum DESC, m.volgorde ASC LIMIT '.$lim); $q->execute([aaMs($before)??0]);
+  }else{ $q=aaDb()->query(AA_SELECT.' WHERE COALESCE(o.hidden, 0) = 0 ORDER BY m.datum DESC, m.volgorde ASC LIMIT '.$lim); }
   return array_map('aaMeldingAPI',$q->fetchAll());
 }
 function aaGetMelding(string $guid, bool $includeHidden=false): ?array {
@@ -57,7 +57,9 @@ function aaInsertMelding(array $m): bool {
   $st->execute([$m['guid'],$m['title']??'',$m['full_melding']??null,($m['dienst']??'')?:'onbekend',$m['prioriteit']??null,(int)$m['datum'],$m['locatie']??null,
     $m['lat']??null,$m['lon']??null,$m['stad']??null,$m['regio']??null,$m['capcode']??null,$m['categorie']??null,$m['grip']??null,$m['opschaling']??null,
     aaJson($m['eenheden']??[]),aaJson($m['voertuigen']??[]),$m['link']??null,$m['created_at']??aaNow(),$m['incident']??null,($m['vlaggen']??'')?:null,$m['dedup_key']??null,$m['bron']??null]);
-  return $st->rowCount()>0;
+  $ok=$st->rowCount()>0;
+  if($ok)aaDb()->prepare('UPDATE meldingen SET volgorde = (SELECT v FROM (SELECT COALESCE(MAX(volgorde),0)+1 AS v FROM meldingen) x) WHERE guid = ? AND volgorde IS NULL')->execute([$m['guid']]);
+  return $ok;
 }
 
 // ------------------------------------------------------------------ incident.js

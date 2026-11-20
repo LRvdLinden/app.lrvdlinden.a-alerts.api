@@ -63,6 +63,8 @@ function aaD1Schrijf(string $t, array $rows): int {
     if($t==='kv'&&preg_match('/^(koyeb_|aa_)/',(string)$r['key']))continue;
     $v=[]; foreach($cols as $c){ $x=$r[$c]; if(is_array($x))$x=pack('C*',...$x); $v[]=$x; }
     $st->execute($v);
+    // The rowid of the Worker gives the order of rows with the same time.
+    if(isset($r['_rid'])&&in_array($t,['meldingen','waarschuwingen'],true))aaDb()->prepare('UPDATE `'.$t.'` SET volgorde = ? WHERE '.($t==='meldingen'?'guid':'id').' = ?')->execute([(int)$r['_rid'],$r[$t==='meldingen'?'guid':'id']]);
   }
   if($t==='meldingen')aaDb()->exec("UPDATE meldingen SET bron='d1' WHERE bron IS NULL");
   return count($rows);
@@ -99,7 +101,7 @@ try{
     foreach(AA_D1_KLEIN as $min=>$tabellen){
       if(aaNow()-(int)($status['klein_ms'][$min]??0)<($min*60000-30000))continue;
       foreach($tabellen as $t){
-        $rows=aaD1('SELECT * FROM '.$t.' LIMIT 20000');
+        $rows=aaD1('SELECT rowid AS _rid, * FROM '.$t.' LIMIT 20000');
         // Removed on the Worker (a device that unsubscribed, a hidden item): removed here too.
         aaDb()->beginTransaction(); aaDb()->exec('DELETE FROM `'.$t.'`'); aaD1Schrijf($t,$rows); aaDb()->commit();
         $status['tellingen'][$t]=count($rows);
@@ -110,6 +112,15 @@ try{
         aaD1Schrijf('nieuws_fotos',aaD1('SELECT * FROM nieuws_fotos WHERE at > ?',[$max]));
         $max=(int)aaDb()->query('SELECT COALESCE(MAX(at),0) FROM post_inzet')->fetchColumn();
         aaD1Schrijf('post_inzet',aaD1('SELECT * FROM post_inzet WHERE at > ?',[$max-3600000]));
+      }
+      if($min===5){
+        // Order of alerts with the same time: the rowid of the Worker for the alerts of the last hours.
+        $u=aaDb()->prepare('UPDATE meldingen SET volgorde = ? WHERE guid = ?');
+        foreach(aaD1('SELECT rowid AS _rid, guid FROM meldingen WHERE created_at > ?',[aaNow()-6*3600000]) as $r)$u->execute([(int)$r['_rid'],$r['guid']]);
+        if(aaKvGet('aa_d1_volgorde')===null){
+          foreach(aaD1('SELECT rowid AS _rid, guid FROM meldingen') as $r)$u->execute([(int)$r['_rid'],$r['guid']]);
+          aaKvSet('aa_d1_volgorde',(string)aaNow());
+        }
       }
       $status['klein_ms'][$min]=aaNow(); $status['klein'][$min]=aaIso(aaNow());
     }

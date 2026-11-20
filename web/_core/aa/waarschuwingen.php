@@ -48,7 +48,7 @@ function aaWarningAPI(?array $row, bool $withArea=true, bool $metLandelijk=false
 }
 function aaListWarnings(mixed $days=null, bool $kind=false, bool $vnog=false): array {
   $n=is_numeric($days)?(float)$days:0; $since=aaNow()-(int)(min($n?:7,30)*AA_DAY);
-  $q=aaDb()->prepare(AA_PUBLIC_SELECT." AND (COALESCE(w.end_at, w.start_at) >= ? OR w.status != 'beeindigd') ORDER BY w.start_at DESC LIMIT 200"); $q->execute([$since]);
+  $q=aaDb()->prepare(AA_PUBLIC_SELECT." AND (COALESCE(w.end_at, w.start_at) >= ? OR w.status != 'beeindigd') ORDER BY w.start_at DESC, w.volgorde DESC LIMIT 200"); $q->execute([$since]);
   $out=[]; foreach($q->fetchAll() as $r){ if(!$kind&&in_array($r['bron'],AA_KIND_BRONNEN,true))continue; if(!$vnog&&$r['bron']==='vnog')continue; $out[]=aaWarningAPI(aaWithOverride($r)); }
   return $out;
 }

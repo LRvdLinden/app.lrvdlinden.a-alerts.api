@@ -9,7 +9,8 @@ ini_set('default_charset', '');
 
 $upstream = rtrim(getenv('AALERTS_UPSTREAM') ?: UPSTREAM, '/');
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
-$path = parse_url($uri, PHP_URL_PATH) ?: '/';
+// Not parse_url: it fails on a path such as /v1/waarschuwingen/vnog:2418 (a colon with digits looks like a port).
+$path = explode('?', $uri, 2)[0] ?: '/';
 // Parallel private API takes precedence on its explicit routes only.
 // Without a valid Bearer token, or before cPanel database setup, it fails closed.
 require_once __DIR__.'/_core/private-api.php';
