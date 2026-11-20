@@ -2,7 +2,7 @@ name: Voorbeelden van de bronnen ophalen (alleen lezen)
 on:
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   samples:
     runs-on: ubuntu-24.04
@@ -25,5 +25,9 @@ jobs:
           g vnog-alles.json application/json "https://www.vnog.nl/api/v1/incidents?municipality=47,66"
           g politie.json application/json "https://api.politie.nl/v4/nieuws?language=nl&lat=52.2112&lon=5.9699&radius=25&maxnumberofitems=25&offset=0"
           for p in apeldoorn beekbergen ugchelen loenen teuge hoenderloo; do g 112-$p.xml "application/rss+xml, application/xml" https://112nieuws.net/tag/$p/feed/; done
-      - uses: actions/upload-artifact@v4
-        with: { name: bronnen-samples, path: s, retention-days: 3 }
+      - name: Op aparte branch zetten (geen uitrol; openbare brondata)
+        run: |
+          cd s
+          git init -q -b bronnen-samples && git add -A
+          git -c user.name=a-alerts-bot -c user.email=bot@a-alerts.nl commit -qm "Voorbeelden bronnen $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:refs/heads/bronnen-samples
