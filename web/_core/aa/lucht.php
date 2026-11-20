@@ -137,7 +137,7 @@ function aaHelikopters(): array {
       // The key of adsb.lol (private configuration), when there is one: a shared host IP gets refused without it.
       setting('ADSB_LOL_API_KEY')!==''?['api-auth: '.setting('ADSB_LOL_API_KEY')]:[])]);
     $raw=curl_exec($ch); $code=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); $cerr=curl_errno($ch); curl_close($ch);
-    if($code!==200)throw new RuntimeException('ADS-B HTTP '.$code.($cerr?' curl '.$cerr:''));
+    if($code!==200)throw new RuntimeException('ADS-B HTTP '.$code.($cerr?' curl '.$cerr:'').' '.substr(trim((string)preg_replace('/\s+/',' ',strip_tags((string)$raw))),0,120));
     $body=json_decode((string)$raw,true); if(!is_array($body)||!is_array($body['ac']??null))throw new RuntimeException('Invalid ADS-B payload');
     $bnow=is_numeric($body['now']??null)&&(float)$body['now']>0?(int)$body['now']:aaNow();
     $learned=aaKvPrefix('heli_hex:');
@@ -160,7 +160,7 @@ function aaHelikopters(): array {
   }catch(Throwable $e){
     if(str_contains($e->getMessage(),'HTTP 429'))try{aaKvSet('adsb_pauze_tot',(string)(aaNow()+60000));}catch(Throwable){}
     // Why it failed, for /docs and the checks (never a key in it): HTTP code or curl error number.
-    try{ aaKvSet('adsb_fout',aaJson(['at'=>aaIso(aaNow()),'fout'=>substr($e->getMessage(),0,80)])); }catch(Throwable){}
+    try{ aaKvSet('adsb_fout',aaJson(['at'=>aaIso(aaNow()),'fout'=>substr($e->getMessage(),0,200)])); }catch(Throwable){}
     $data=['bijgewerkt'=>aaIso(aaNow()),'bron'=>'adsb.lol (ODbL)','helikopters'=>[],'lucht'=>[],'fout'=>true,'verouderd'=>true]; $failing=true;
   }
   $n=aaNow(); $h=aaRetainAircraft($data['helikopters'],$snap['helikopters']??[],$n); $l=aaRetainAircraft($data['lucht'],$snap['lucht']??[],$n);
