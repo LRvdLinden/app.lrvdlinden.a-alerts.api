@@ -16,6 +16,8 @@ require_once __DIR__.'/_core/private-api.php';
 if (!getenv('AALERTS_UPSTREAM')) {
     require_once __DIR__.'/_core/docs.php';
     docsRoute($path);
+    require_once __DIR__.'/_core/aa/overdracht.php';
+    aaOverdrachtRoute($path);
     require_once __DIR__.'/_core/aa/routes.php';
     aaRoute($path);
     require_once __DIR__.'/_core/compat.php';

@@ -19,6 +19,9 @@ function privateConfig(): array {
   $settings=($path!==''&&is_file($path))?require $path:[];
   if(!is_array($settings))$settings=[];
   // Separate source secrets are installed by GitHub Actions without rewriting DB credentials.
+  // Keys of the Worker, transferred once (aa/overdracht.php). The files below (sources.php) win when both name a key.
+  $ws=$path!==''?dirname($path).'/worker-secrets.php':'';
+  if($ws!==''&&is_file($ws)){$w=require $ws;if(is_array($w))$settings=array_merge($settings,$w);}
   $sources=$path!==''?dirname($path).'/sources.php':'';
   if($sources!==''&&is_file($sources)){
     $more=require $sources;
