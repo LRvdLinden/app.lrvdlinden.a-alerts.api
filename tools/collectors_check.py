@@ -41,7 +41,7 @@ print("VERGELIJK http",code)
 for name,row in ((data or {}).get("vergelijking",{}) if isinstance(data,dict) else {}).items():
  print("AANTAL",name,"eigen",row.get("eigen"),"spiegel",row.get("spiegel"),"worker",row.get("worker"),"ontbreekt_in_spiegel",row.get("ontbrekend_in_spiegel"))
 code,data=live("GET /v1/eigen")
-print("EIGEN http",code,json.dumps(data.get("p2000") if isinstance(data,dict) else data,ensure_ascii=False)[:1500])
+print("EIGEN http",code,json.dumps({k:data.get(k) for k in ("tabellen","d1_overname","p2000")} if isinstance(data,dict) else data,ensure_ascii=False)[:2500])
 code,data=live("GET /v1/spiegel")
 print("SPIEGEL http",code)
 for row in (data or {}).get("spiegel",[]) if isinstance(data,dict) else []:

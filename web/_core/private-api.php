@@ -96,7 +96,9 @@ function apiRoute(string $path): bool {
         }
       }
       $missing=count($mist);
-      privateReply(200,['shadow'=>true,'p2000'=>['intake'=>$kv,'per_bron'=>$per,'worker_sinds_start'=>$spiegel,'ontbreekt_bij_eigen'=>$missing,
+      $tabellen=[];foreach(['meldingen','devices','device_prefs','waarschuwingen','nieuws','nieuws_updates','installs','post_inzet','heli_posities','overrides','kv'] as $t){try{$tabellen[$t]=(int)$db->query('SELECT COUNT(*) FROM `'.$t.'`')->fetchColumn();}catch(Throwable){$tabellen[$t]=null;}}
+      $d1=aaParse(aaKvGet('aa_d1'),null);
+      privateReply(200,['shadow'=>true,'tabellen'=>$tabellen,'d1_overname'=>$d1,'p2000'=>['intake'=>$kv,'per_bron'=>$per,'worker_sinds_start'=>$spiegel,'ontbreekt_bij_eigen'=>$missing,
         'voorbeelden_ontbrekend'=>array_values(array_filter($mist)),'push'=>setting('PUSH_ACTIEF')==='1'?'aan':'uit (de Worker verstuurt de pushmeldingen)']]);
     }
     // Exact last answer of a Worker route, as stored by the mirror ("spiegel/meldingen", "spiegel/helikopters/status").

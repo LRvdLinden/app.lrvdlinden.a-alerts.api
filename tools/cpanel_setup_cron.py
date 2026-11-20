@@ -29,7 +29,7 @@ if not isinstance(known,list):raise RuntimeError("CRON_LIST_UNEXPECTED")
 existing=[str(x.get("command","")) for x in known if isinstance(x,dict)]
 jobs=[
  ("p2000","*", "*/1"),("alerts","*", "*/5"),("air","*", "*/5"),
- ("traffic","*", "*/5"),("news","*", "*/15"),("reference","*", "*/15"),("worker","*", "*/1"),("koyeb","*", "*/1")]
+ ("traffic","*", "*/5"),("news","*", "*/15"),("reference","*", "*/15"),("worker","*", "*/1"),("koyeb","*", "*/1"),("d1","*", "*/1")]
 # Paused groups get no cron job and an existing one is removed. p2000: the p2000.page key is personal and limited to
 # a number of IP addresses; the production Worker polls it already, so a second poller from this server can lock it out.
 PAUSED={x for x in os.getenv("AALERTS_CRON_PAUSED","p2000").split(",") if x}
@@ -44,7 +44,7 @@ for group,hour,minute in jobs:
  if group in PAUSED:
   print("CRON_PAUSED",group)
   continue
- target=(root.rstrip("/")+"/_core/aa/koyeb.php") if group=="koyeb" else script+" "+group
+ target=(root.rstrip("/")+"/_core/aa/"+group+".php") if group in ("koyeb","d1") else script+" "+group
  command=PHP+" -q "+target+" >/dev/null 2>&1 # aalerts-api-"+group
  if command in existing:
   print("CRON_EXISTS",group)
