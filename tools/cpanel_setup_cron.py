@@ -30,7 +30,20 @@ existing=[str(x.get("command","")) for x in known if isinstance(x,dict)]
 jobs=[
  ("p2000","*", "*/1"),("alerts","*", "*/5"),("air","*", "*/5"),
  ("traffic","*", "*/5"),("news","*", "*/15"),("reference","*", "*/15")]
+# Paused groups get no cron job and an existing one is removed. p2000: the p2000.page key is personal and limited to
+# a number of IP addresses; the production Worker polls it already, so a second poller from this server can lock it out.
+PAUSED={x for x in os.getenv("AALERTS_CRON_PAUSED","p2000").split(",") if x}
+for row in sorted([x for x in known if isinstance(x,dict)],key=lambda x:-int(x.get("count") or 0)):
+ tag=re.search(r"# aalerts-api-([a-z0-9]+)\s*$",str(row.get("command","")))
+ if not tag or tag.group(1) not in PAUSED:continue
+ gone=cp2("Cron","remove_line",line=str(row.get("count")),linekey=str(row.get("linekey","")))
+ if not isinstance(gone,list) or not any(isinstance(x,dict) and str(x.get("status"))=="1" for x in gone):
+  raise RuntimeError("CRON_REMOVE_FAILED_"+tag.group(1))
+ print("CRON_REMOVED",tag.group(1))
 for group,hour,minute in jobs:
+ if group in PAUSED:
+  print("CRON_PAUSED",group)
+  continue
  command=PHP+" -q "+script+" "+group+" >/dev/null 2>&1 # aalerts-api-"+group
  if command in existing:
   print("CRON_EXISTS",group)

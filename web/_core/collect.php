@@ -127,7 +127,12 @@ function newsFrom112(): array {
 try{
  $db=privateDb();
  aalertsEnsureSchema($db);
- if(setting('P2000_PAGE_API_URL')!=='')runCollector($db,'p2000.page','p2000',fn()=>normalizeP2000(entries(sourceJson(setting('P2000_PAGE_API_URL')))));
+ if(setting('P2000_PAGE_API_URL')!=='')runCollector($db,'p2000.page','p2000',function(){
+   $rows=entries(sourceJson(setting('P2000_PAGE_API_URL')));
+   // The feed answers HTTP 200 with one error row when the key is used from too many IP addresses: that is a failure, not "no alerts".
+   foreach($rows as $r)if(is_array($r)&&(($r['vr']??'')==='Error'||preg_match('/te veel ip-adressen/i',(string)($r['melding']??''))))throw new RuntimeException('p2000_rejected');
+   return normalizeP2000($rows);
+ });
  runCollector($db,'nlalert','waarschuwingen',fn()=>normalizeNlAlert(entries(sourceJson('https://api.public-warning.app/api/v1/providers/nl-alert/alerts'))));
  runCollector($db,'burgernet','waarschuwingen',fn()=>normalizeBurgernet(entries(sourceJson('https://www.burgernet.nl/active'))));
  runCollector($db,'kind','waarschuwingen',fn()=>normalizeKind(entries(sourceJson('https://services.burgernet.nl/landactiehost/api/v1/alerts'))));
