@@ -87,6 +87,7 @@ for k in _j.loads(pathlib.Path("web/_core/aa/data/kazernes.json").read_text())[:
  sw,x,_=get(W,"/v1/posten/"+k["id"]);se,y,bron=get(A,"/v1/posten/"+k["id"])
  d=diff(x,y)
  if d or sw!=se:print("ROUTE /v1/posten/"+k["id"],"worker",sw,"eigen",se,"verschillen",len(d),";".join(d[:5]))
+ if d:print("  POST",k["id"],"worker",x.get("inzetten"),x.get("laatste"),(x.get("recent") or [])[:2],"| eigen",y.get("inzetten"),y.get("laatste"),(y.get("recent") or [])[:2])
 print("POSTEN_KLAAR")
 # Root and health: same fields as the Worker; times and counts differ per server.
 for p in ("/","/health"):
