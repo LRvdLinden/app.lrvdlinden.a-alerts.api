@@ -178,6 +178,22 @@ try{
    runCollector($db,'worker.waarschuwingen','waarschuwingen',fn()=>$list($get('/v1/waarschuwingen?days=30&kind=1&vnog=1'),['data','waarschuwingen']));
    runCollector($db,'worker.nieuws','nieuws',fn()=>$list($get('/v1/nieuws?limit=100'),['data','nieuws','items']));
    runCollector($db,'worker.helikopters','helikopters',fn()=>$list($get('/v1/helikopters'),['helikopters']));
+   // History: one older page per minute (meldingen 500, nieuws 100) via "before", until the Worker has nothing older.
+   // The cursor only moves back in time, so a page can never be read twice in a loop.
+   $kvGet=$db->prepare('SELECT value_json FROM api_kv WHERE key_name=?');
+   foreach([['meldingen',500,'datum_tijd','p2000'],['nieuws',100,'at','nieuws']] as [$naam,$per,$veld,$soort]){
+     $key='worker:archief:'.$naam;$kvGet->execute([$key]);$c=json_decode((string)($kvGet->fetchColumn()?:'null'),true);
+     if(is_array($c)&&!empty($c['klaar']))continue;
+     $before=is_array($c)?(string)($c['before']??''):'';
+     runCollector($db,'worker.archief.'.$naam,$soort,function()use($worker,$naam,$per,$veld,$before,$key,$snap){
+       $d=sourceJson($worker.'/v1/'.$naam.'?limit='.$per.($before!==''?'&before='.rawurlencode($before):''));
+       $items=array_is_list($d)?$d:[];
+       $oudste=null;foreach($items as $x){$t=is_array($x)?strtotime((string)($x[$veld]??'')):false;if($t!==false&&($oudste===null||$t<$oudste))$oudste=$t;}
+       $klaar=!$items||$oudste===null||($before!==''&&$oudste>=strtotime($before));
+       $snap->execute([$key,json_encode($klaar?['klaar'=>true,'tot'=>$before]:['before'=>gmdate('Y-m-d\TH:i:s\Z',$oudste)])]);
+       return $items;
+     });
+   }
    if($minute%5===0){
      runCollector($db,'worker.lucht','lucht',fn()=>$list($get('/v1/lucht'),['toestellen']));
      runCollector($db,'worker.verkeer','verkeer',fn()=>$list($get('/v1/verkeer'),['items','gepland','flitsers']));
