@@ -170,3 +170,25 @@ footer{border-color:rgba(255,255,255,.1)}
  .endpoint-media figure{min-width:90px;max-width:110px}
  .endpoint-media img{width:58px;height:58px}
 }
+
+
+/* Authenticated, server-side read-only JSON viewer */
+.docs-live{border:1px solid rgba(239,21,48,.24);background:linear-gradient(140deg,rgba(220,38,38,.1),rgba(18,18,25,.98) 44%);border-radius:16px;padding:22px;margin:24px 0}
+.docs-live-heading h3{font:900 20px/1.25 var(--display);margin:5px 0 8px;color:#fff}
+.docs-live-heading p{font-size:12px;color:#aeafbc;line-height:1.65;max-width:730px}
+.docs-live-form{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-top:18px}
+.docs-live-form label{display:grid;gap:6px;color:#e5e5ee;font-size:12px;font-weight:700;flex:1 1 150px;max-width:280px}
+.docs-live-form input,.docs-live-form select{background:#1c1c26;border:1px solid #444450;color:#fff;border-radius:9px;padding:11px 12px;min-height:44px;width:100%;font:inherit}
+.docs-live-form input:focus,.docs-live-form select:focus{outline:2px solid #ff6478;outline-offset:2px}
+.docs-live-button{min-height:44px;border:0;background:#dc2626;color:#fff;font:800 12px var(--font);padding:11px 16px;border-radius:10px}
+.docs-live-button:hover{background:#ef1530}
+.docs-live-unavailable{font-size:12px;color:#a7a7b8}
+.docs-live-result{margin-top:18px;border:1px solid #343440;background:#101016;border-radius:12px;overflow:hidden}
+.docs-live-result-head{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:12px 15px;border-bottom:1px solid #2c2c35;font-size:12px}
+.docs-live-result-head strong{font:900 13px ui-monospace,monospace}
+.docs-live-result-success{color:#4ade80}
+.docs-live-result-failure{color:#ff8596}
+.docs-live-path{padding:10px 15px;color:#9b9baa;font:11px ui-monospace,monospace;overflow-wrap:anywhere}
+.docs-live-result p{color:#ffc6cf;font-size:12px;padding:0 15px 12px}
+.docs-live-result pre{padding:16px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:#d8e4ee;font:12px/1.65 ui-monospace,Consolas,monospace;max-height:560px;overflow:auto}
+@media(max-width:680px){.docs-live{padding:15px}.docs-live-form{flex-direction:column;align-items:stretch}.docs-live-form label{max-width:none;width:100%;flex:auto}.docs-live-button{width:100%}}
