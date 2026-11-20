@@ -18,6 +18,8 @@ function aaMs(mixed $x): ?int {
   try{$d=new DateTimeImmutable($s);}catch(Throwable){return null;}
   return (int)$d->format('Uv');
 }
+/** JS `v || alt`: arrays and objects are truthy, as is the string "0". */
+function aaOr(mixed $v, mixed $alt=null): mixed { return ($v===null||$v===false||$v===''||$v===0||$v===0.0)?$alt:$v; }
 function aaJson(mixed $v): string { return json_encode($v,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE); }
 function aaParse(?string $s, mixed $fallback=[]): mixed { if($s===null||$s==='')return $fallback; $d=json_decode($s,true); return $d===null?$fallback:$d; }
 

@@ -5,10 +5,16 @@ Prints per route whether status and fields match and how many records differ; ne
 """
 import json,sys,urllib.request,urllib.error
 W="https://p2000-apeldoorn-api.lrvdlinden.workers.dev"; A="https://api.a-alerts.nl"
+def norm(x):
+ # Each API points to itself for its own photos: the host is not a difference.
+ if isinstance(x,str):return x.replace("https://api.a-alerts.nl",W)
+ if isinstance(x,list):return [norm(i) for i in x]
+ if isinstance(x,dict):return {k:norm(v) for k,v in x.items()}
+ return x
 def get(base,path):
  try:
   with urllib.request.urlopen(urllib.request.Request(base+path,headers={"Accept":"application/json","User-Agent":"A-Alerts-parity/1.0"}),timeout=25) as r:
-   return r.status,json.loads(r.read() or b"null"),r.headers.get("X-AAlerts-Bron")
+   return r.status,norm(json.loads(r.read() or b"null")),r.headers.get("X-AAlerts-Bron")
  except urllib.error.HTTPError as e:
   try:body=json.loads(e.read() or b"null")
   except ValueError:body=None
@@ -67,6 +73,13 @@ for w in (ws or [])[:8]:
  sw,x,_=get(W,p);se,y,bron=get(A,p);d=diff(x,y)
  print("ROUTE /v1/waarschuwingen/{"+w["bron"]+"}","worker",sw,"eigen",se,"verschillen",len(d),";".join(d[:5]))
  if se!=sw:print("  ID",w["id"][:60],"EIGEN_ANTWOORD",str(y)[:200])
+for p in ["/v1/nieuws","/v1/nieuws?limit=100","/v1/nieuws?soort=politie","/v1/nieuws?soort=liveblog","/v1/nieuws?soort=weer","/v1/nieuws?soort=regionaal"]:los(p)
+_,ns,_=get(W,"/v1/nieuws?limit=100")
+nd=0
+for n in (ns or []):
+ sw,x,_=get(W,"/v1/nieuws/"+n["id"]);se,y,_=get(A,"/v1/nieuws/"+n["id"]);d=diff(x,y)
+ if d or sw!=se:nd+=1;print("ROUTE /v1/nieuws/{"+n["soort"]+"}",n["id"],"worker",sw,"eigen",se,"verschillen",len(d),";".join(d[:5]))
+print("NIEUWS_DETAILS",len(ns or []),"afwijkend",nd)
 import json as _j,pathlib
 for k in _j.loads(pathlib.Path("web/_core/aa/data/kazernes.json").read_text())[:58]:
  sw,x,_=get(W,"/v1/posten/"+k["id"]);se,y,bron=get(A,"/v1/posten/"+k["id"])
