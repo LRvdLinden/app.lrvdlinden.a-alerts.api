@@ -74,8 +74,10 @@ function docsLiveState(): array {
   $kErr=docsMsOf(docsKv($db,'koyeb_last_error')); $kErrT=docsKv($db,'koyeb_last_error_text');
   $nKoyeb=$aa?(int)docsScalar($db,"SELECT COUNT(*) FROM meldingen WHERE bron = 'koyeb'"):0;
   $p2State=$kMsg&&$now-$kMsg<180000?'live':($kStart?'fout':'gepland');
+  $login=null; if(is_file(__DIR__.'/aa/koyeb-login.php')){ require_once __DIR__.'/aa/koyeb-login.php'; $login=aaKoyebVerbinding()['soort']??null; }
+  $loginTekst=$login==='website'?'Aanmelding: website-login met code van de beheerder van de stream (vers tijdstempel per verbinding)':($login==='homey'?'Aanmelding: eigen Homey-identiteit (reserve, zonder P2000_CODE)':'Aanmelding: niet ingesteld');
   $out['bronnen'][]=['id'=>'p2000','naam'=>'P2000 · eigen Koyeb-inname','icoon'=>'/images/website/icon_brandweer.png','staat'=>$p2State,
-    'laatst'=>$kMsg,'detail'=>'Laatste nieuwe melding uit het werkgebied: '.docsAgo($kAdd).' · '.$nKoyeb.' meldingen zelf binnengehaald sinds '.($kStart?docsAgo($kStart):'—')
+    'laatst'=>$kMsg,'detail'=>$loginTekst.' · Laatste nieuwe melding uit het werkgebied: '.docsAgo($kAdd).' · '.$nKoyeb.' meldingen zelf binnengehaald sinds '.($kStart?docsAgo($kStart):'—')
       .($kErr&&(!$kMsg||$kErr>$kMsg)?' · laatste fout: '.(string)$kErrT:'')];
   $pp=$run('p2000.page');
   $out['bronnen'][]=['id'=>'p2000page','naam'=>'P2000 · p2000.page (eigen poller)','icoon'=>'/images/website/icon_ambulance.png','staat'=>'uit','laatst'=>$pp['at']??null,
@@ -128,9 +130,14 @@ function docsLiveState(): array {
   $heliPos=$aa?(int)(docsScalar($db,'SELECT MAX(at) FROM heli_posities')??0):0;
   $snap=docsKvAt($db,'lucht:last-known-v1');
   $lucht=docsModule('routes-lucht.php');
+  $via=json_decode((string)(docsKv($db,'adsb_via')??''),true); $fout=json_decode((string)(docsKv($db,'adsb_fout')??''),true);
+  $viaAt=is_array($via)?docsMsOf((string)($via['at']??'')):null; $foutAt=is_array($fout)?docsMsOf((string)($fout['at']??'')):null;
+  $viaOk=is_array($via)&&(int)($via['http']??0)===200;
+  $viaTekst=is_array($via)?'Laatste opvraag '.docsAgo($viaAt).' '.(($via['via']??'')==='koyeb'?'via de eigen Koyeb-dienst (reserve)':'rechtstreeks bij adsb.lol').' · HTTP '.(int)($via['http']??0).'. ':'';
   $out['bronnen'][]=['id'=>'adsb','naam'=>'Helikopters & luchtvaart (adsb.lol)','icoon'=>'/images/website/heli_lifeliner.png',
-    'staat'=>$lucht&&$snap&&$now-$snap<600000?'live':($lucht?'deels':'gepland'),'laatst'=>$lucht?(max($snap??0,$heliPos)?:null):null,
-    'detail'=>($lucht?'Eigen routes staan op de server. Laatste vastgelegde positie: '.docsAgo($heliPos?:null).'.':'Eigen routes en eigen positie-opslag nog in aanbouw; de posities in de database zijn eenmalig overgenomen uit de Worker.')];
+    'staat'=>$lucht&&$viaOk&&$viaAt&&$now-$viaAt<180000?'live':($lucht&&$viaAt&&$now-$viaAt<180000?'fout':($lucht?'deels':'gepland')),'laatst'=>$viaAt?:($lucht?(max($snap??0,$heliPos)?:null):null),
+    'detail'=>$viaTekst.'adsb.lol weigert het gedeelde adres van de hosting regelmatig (HTTP 429); dan vraagt de server een minuut niet rechtstreeks en komt dezelfde adsb.lol-data via de eigen Koyeb-dienst. Laatste vastgelegde positie: '.docsAgo($heliPos?:null).'.'
+      .(is_array($fout)&&$foutAt&&(!$viaOk||$foutAt>($viaAt??0))?' Laatste fout: '.(string)($fout['fout']??'').' ('.docsAgo($foutAt).').':'')];
   // --- traffic
   $vk=docsKvAt($db,'verkeer'); $nd=$run('ndw');
   $out['bronnen'][]=['id'=>'verkeer','naam'=>'Verkeer (NDW, flitsers, werkzaamheden)','icoon'=>'/images/website/verkeer_file.png',
@@ -164,7 +171,7 @@ function docsLiveState(): array {
     ['naam'=>'Overstap van de apps en site naar api.a-alerts.nl','staat'=>'gepland','uitleg'=>'Alleen na uitdrukkelijke goedkeuring; de Worker blijft tot dan productie.'],
   ];
   // --- settings present (names only)
-  foreach(['P2000_PAGE_API_URL'=>'P2000.page','KOYEB_SUBPROTOCOL'=>'Koyeb-identiteit','VERKEER_URL'=>'Verkeer','ADSB_LOL_API_KEY'=>'adsb.lol','KNMI_WMS_KEY'=>'KNMI radar',
+  foreach(['P2000_PAGE_API_URL'=>'P2000.page','P2000_CODE'=>'Koyeb-aanmelding (website)','KOYEB_SUBPROTOCOL'=>'Koyeb-reserve (Homey)','VERKEER_URL'=>'Verkeer','ADSB_LOL_API_KEY'=>'adsb.lol','KNMI_WMS_KEY'=>'KNMI radar',
     'APN_P8_CERT'=>'APNs','FCM_SERVICE_ACCOUNT'=>'FCM','WEB_WEATHERKIT_P8'=>'WeatherKit','MAPS_SERVER_API_P8'=>'Apple Maps','WEB_MAPKIT_JS_P8'=>'MapKit JS',
     'HOMEY_WEBHOOK_ID'=>'Homey','BEHEER_USER'=>'Beheer-login','CLOUDFLARE_API_TOKEN'=>'D1-overname'] as $k=>$label)$out['config'][]=['label'=>$label,'aanwezig'=>docsSet($k)];
   return $out;

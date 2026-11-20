@@ -28,10 +28,11 @@ function aaRoute(string $path): void {
   }
   $path=rtrim($path,'/')?:'/';
   $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');
-  static $eigen=['/v1/meldingen','/v1/locaties','/v1/veiligheidsregio','/v1/changelog','/v1/content/','/v1/app','/v1/posten/','/v1/waarschuwingen','/v1/nieuws'];
-  $hit=false; foreach($eigen as $p)if($path===$p||str_starts_with($path,rtrim($p,'/').'/')||($p===$path)){$hit=true;break;}
+  static $eigen=['/','/health','/v1/meldingen','/v1/locaties','/v1/veiligheidsregio','/v1/changelog','/v1/content/','/v1/app','/v1/posten/','/v1/waarschuwingen','/v1/nieuws'];
+  $hit=false; foreach($eigen as $p)if($path===$p||($p!=='/'&&str_starts_with($path,rtrim($p,'/').'/'))){$hit=true;break;}
   if(!$hit)return;
   if($method==='OPTIONS')aaReply(204,null);
+  if($path==='/'||$path==='/health'){ require_once __DIR__.'/health.php'; try{ aaReply(200,aaHealth()); }catch(Throwable $e){ error_log('[aa health] '.$e->getMessage()); aaReply(500,['error'=>'Internal error']); } }
   try{
     if($method==='GET'&&$path==='/v1/meldingen')
       aaReply(200,aaListMeldingen($_GET['limit']??null,$_GET['before']??null),['Cache-Control'=>'public, max-age=5']);
