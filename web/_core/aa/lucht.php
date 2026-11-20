@@ -118,15 +118,17 @@ function aaVulAan(array &$lijst, array $vorige, int $now): void {
 }
 /** heli.js helikopters(): the current picture, at most 12 seconds old. */
 function aaHelikopters(): array {
-  $file=sys_get_temp_dir().'/aalerts-adsb-'.substr(hash('sha256',__DIR__),0,12).'.json';
-  $now=aaNow(); $cached=is_file($file)?json_decode((string)file_get_contents($file),true):null;
+  // One shared picture for the web requests and the cron (they may not share a temp folder): kept in the database.
+  $now=aaNow(); $cached=aaParse(aaKvGet('adsb_cache'),null);
   $onlyRecent=fn($d)=>['helikopters'=>aaRetainAircraft($d['helikopters']??[],[],aaNow()),'lucht'=>aaRetainAircraft($d['lucht']??[],[],aaNow())]+$d;
-  if(is_array($cached)&&$now-(int)($cached['_at']??0)<12000){unset($cached['_at'],$cached['_laatste']);return array_merge($cached,$onlyRecent($cached));}
-  $lock=fopen($file.'.lock','c');
-  if($lock&&!flock($lock,LOCK_EX|LOCK_NB)){ // another request is fetching: give the last picture
-    if(is_array($cached)){unset($cached['_at'],$cached['_laatste']);return array_merge($cached,$onlyRecent($cached));}
-    flock($lock,LOCK_EX);
-  }
+  $geef=function($c)use($onlyRecent){unset($c['_at'],$c['_laatste']);return array_merge($c,$onlyRecent($c));};
+  if(is_array($cached)&&$now-(int)($cached['_at']??0)<12000)return $geef($cached);
+  // After a refusal (429) adsb.lol gets a minute of rest; meanwhile the last picture (greyed when old).
+  if(is_array($cached)&&$now<(int)(aaKvGet('adsb_pauze_tot')??0))return $geef($cached);
+  $db=aaDb(); $lock=(int)$db->query("SELECT GET_LOCK('aalerts_adsb', 0)")->fetchColumn()===1;
+  if(!$lock){ if(is_array($cached))return $geef($cached); $db->query("SELECT GET_LOCK('aalerts_adsb', 10)"); $lock=true; }
+  $cached=aaParse(aaKvGet('adsb_cache'),null)?:$cached;
+  if(is_array($cached)&&aaNow()-(int)($cached['_at']??0)<12000){ $db->query("SELECT RELEASE_LOCK('aalerts_adsb')"); return $geef($cached); }
   $laatste=is_array($cached)?($cached['_laatste']??[]):[];
   $snap=aaParse(aaKvGet('lucht:last-known-v1'),null); if(!is_array($snap))$snap=['helikopters'=>[],'lucht'=>[]];
   try{
@@ -156,6 +158,7 @@ function aaHelikopters(): array {
     foreach($lucht as &$h){$h['boven']=$h['op_grond']?null:(aaPlaatsBij($h['lat'],$h['lon'])['tekst']??null);} unset($h);
     $data=['bijgewerkt'=>aaIso(aaNow()),'bron'=>'adsb.lol (ODbL)','helikopters'=>$list,'lucht'=>$lucht]; $failing=false;
   }catch(Throwable $e){
+    if(str_contains($e->getMessage(),'HTTP 429'))try{aaKvSet('adsb_pauze_tot',(string)(aaNow()+60000));}catch(Throwable){}
     // Why it failed, for /docs and the checks (never a key in it): HTTP code or curl error number.
     try{ aaKvSet('adsb_fout',aaJson(['at'=>aaIso(aaNow()),'fout'=>substr($e->getMessage(),0,80)])); }catch(Throwable){}
     $data=['bijgewerkt'=>aaIso(aaNow()),'bron'=>'adsb.lol (ODbL)','helikopters'=>[],'lucht'=>[],'fout'=>true,'verouderd'=>true]; $failing=true;
@@ -164,7 +167,7 @@ function aaHelikopters(): array {
   $data['helikopters']=$h; $data['lucht']=$l;
   $hasLive=false; foreach(array_merge($h,$l) as $x)if(!$x['verouderd'])$hasLive=true;
   if(!$failing&&$hasLive&&$n-(int)(aaKvRow('lucht:last-known-v1')['at']??0)>30000)aaKvSet('lucht:last-known-v1',aaJson(['helikopters'=>$h,'lucht'=>$l]));
-  file_put_contents($file.'.tmp',json_encode($data+['_at'=>$n,'_laatste'=>$laatste])); rename($file.'.tmp',$file);
-  if($lock){flock($lock,LOCK_UN);fclose($lock);}
+  aaKvSet('adsb_cache',aaJson($data+['_at'=>$n,'_laatste'=>(object)$laatste]));
+  if($lock)$db->query("SELECT RELEASE_LOCK('aalerts_adsb')");
   return $data;
 }
