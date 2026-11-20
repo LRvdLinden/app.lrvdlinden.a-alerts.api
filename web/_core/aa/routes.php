@@ -22,6 +22,10 @@ function aaReply(int $status, mixed $body, array $extra=[]): never {
 }
 
 function aaRoute(string $path): void {
+  // Modules each with their own file (they never edit this file): aircraft/map/traffic/radar and Apple/devices/statistics/beheer.
+  foreach(['lucht'=>'aaRouteLucht','apple'=>'aaRouteApple','bronnen'=>'aaRouteBronnen'] as $f=>$fn){
+    if(is_file(__DIR__."/routes-$f.php")){require_once __DIR__."/routes-$f.php"; if(function_exists($fn))$fn(rtrim($path,'/')?:'/');}
+  }
   $path=rtrim($path,'/')?:'/';
   $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');
   static $eigen=['/v1/meldingen','/v1/locaties','/v1/veiligheidsregio','/v1/changelog','/v1/content/','/v1/app','/v1/posten/','/v1/waarschuwingen','/v1/nieuws'];
