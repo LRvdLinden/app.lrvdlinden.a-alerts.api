@@ -105,7 +105,7 @@ function aaBnStraatPunt(string $straat, array $plaats): ?array {
   $key='bn_straat:'.mb_strtolower($straat).'|'.mb_strtolower($plaats['naam']);
   $oud=aaKvGet($key); if($oud!==null&&$oud!=='')return $oud==='-'?null:array_map('floatval',explode(',',$oud));
   $punt=null;
-  try{ $d=aaPdok('https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q='.aaEncodeURIComponent("$straat ".$plaats['naam']).'&fq=type:weg&rows=3&fl=weergavenaam,centroide_ll');
+  try{ $d=aaPdok('https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q='.aaBrUriComp("$straat ".$plaats['naam']).'&fq=type:weg&rows=3&fl=weergavenaam,centroide_ll');
     foreach($d['response']['docs']??[] as $doc){ $pt=aaPunt($doc['centroide_ll']??''); if(!$pt)continue;
       if(aaDistanceKm($pt[0],$pt[1],(float)$plaats['lat'],(float)$plaats['lon'])<=15){$punt=[round($pt[0]*1e5)/1e5,round($pt[1]*1e5)/1e5];break;} }
   }catch(Throwable){return null;}

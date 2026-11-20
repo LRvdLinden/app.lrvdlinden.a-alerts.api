@@ -10,16 +10,16 @@ require_once __DIR__.'/waarschuwingen.php';
 
 // ------------------------------------------------------------------ JS helpers
 /** JSON.stringify: whole numbers without ".0", no escaped slashes, unicode or line separators. */
-function aaJsNum(mixed $v): mixed {
+function aaBrJsNum(mixed $v): mixed {
   if(is_float($v))return (is_finite($v)&&floor($v)==$v&&abs($v)<9007199254740992)?(int)$v:$v;
-  if(is_array($v)){foreach($v as $k=>$x)$v[$k]=aaJsNum($x);return $v;}
+  if(is_array($v)){foreach($v as $k=>$x)$v[$k]=aaBrJsNum($x);return $v;}
   return $v;
 }
 function aaJsJson(mixed $v): string {
-  return json_encode(aaJsNum($v),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_LINE_TERMINATORS|JSON_INVALID_UTF8_SUBSTITUTE);
+  return json_encode(aaBrJsNum($v),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_LINE_TERMINATORS|JSON_INVALID_UTF8_SUBSTITUTE);
 }
 /** JS encodeURIComponent */
-function aaEncodeURIComponent(string $s): string { return strtr(rawurlencode($s),['%21'=>'!','%2A'=>'*','%27'=>"'",'%28'=>'(','%29'=>')']); }
+function aaBrUriComp(string $s): string { return strtr(rawurlencode($s),['%21'=>'!','%2A'=>'*','%27'=>"'",'%28'=>'(','%29'=>')']); }
 /** JS String.length (UTF-16 code units). */
 function aaJsLen(string $s): int { return intdiv(strlen((string)mb_convert_encoding($s,'UTF-16LE','UTF-8')),2); }
 /** JS str.slice(0, n) in UTF-16 code units (n >= 0). */
@@ -82,7 +82,7 @@ function aaFromNlAlert(mixed $a, int $now): ?array {
   return ['id'=>'nlalert:'.$a['id'],'bron'=>'nlalert','titel'=>aaJsSlice((string)preg_replace('/[.!]$/u','',$first),140),'tekst'=>$nl,'tekst_en'=>aaEnPart($a['message']??null),
     'plaats'=>null,'niveau'=>null,'soort'=>aaOr($a['type']??null,'alert'),'start_at'=>$start??$now,'end_at'=>$stop,
     'status'=>$stop!==null&&$stop<$now?'beeindigd':'actief','gebied'=>$rings,'lat'=>$lat,'lon'=>$lon,
-    'link'=>'https://actueel.nl-alert.nl/alert/'.aaEncodeURIComponent((string)$a['id']).'/'];
+    'link'=>'https://actueel.nl-alert.nl/alert/'.aaBrUriComp((string)$a['id']).'/'];
 }
 
 // ------------------------------------------------------------------ Burgernet
@@ -203,7 +203,7 @@ function aaTxt(mixed $v): string {
   if(is_bool($v))return $v?'true':'false';
   return trim((string)$v);
 }
-function aaNormLevel(mixed $v): string {
+function aaBrNormLevel(mixed $v): string {
   $s=mb_strtolower((string)($v??''));
   if(in_array($s,['red','rood','extreme'],true))return 'red';
   if(in_array($s,['orange','oranje','amber','severe'],true))return 'orange';
@@ -242,7 +242,7 @@ function aaFromKnmi(mixed $data, int $now, array $pagina=[]): array {
       $start=aaDateParse($period['starts_at']??null); $end=aaDateParse($period['ends_at']??null);
       if($start===null||$end===null)continue;
       $parts=[];
-      foreach($period['parts']??[] as $p){ $q=['level'=>aaNormLevel($p['level']??null),'area'=>aaTxt($p['area_description']??null),'rings'=>aaGeomRings($p['geometry']??null),'impact'=>aaTxt($p['impact']??null),'instruction'=>aaTxt($p['instruction']??null)];
+      foreach($period['parts']??[] as $p){ $q=['level'=>aaBrNormLevel($p['level']??null),'area'=>aaTxt($p['area_description']??null),'rings'=>aaGeomRings($p['geometry']??null),'impact'=>aaTxt($p['impact']??null),'instruction'=>aaTxt($p['instruction']??null)];
         if($q['level']!=='green'&&($q['rings']?aaPolygonOverlaps($q['rings']):preg_match('/gelderland|heel nederland|alle provincies/i',$q['area'])))$parts[]=$q; }
       if(!$parts)continue;
       $niveau='green'; foreach($parts as $p)if(aaLevelRank($p['level'])>aaLevelRank($niveau))$niveau=$p['level'];
@@ -279,9 +279,9 @@ function aaFromKnmi(mixed $data, int $now, array $pagina=[]): array {
   foreach($events as $ei=>$ev){
     $evid=array_key_exists('id',$ev)&&$ev['id']!==null?$ev['id']:$ei; $per=[];
     foreach($ev['periods']??[] as $period)foreach($period['parts']??[] as $p){
-      $level=aaNormLevel($p['level']??null); $rings=aaGeomRings($p['geometry']??null);
+      $level=aaBrNormLevel($p['level']??null); $rings=aaGeomRings($p['geometry']??null);
       if($level==='green'||!$rings)continue;
-      $key=aaTxt($p['area_description']??null); if($key==='')$key=json_encode(aaJsNum($rings[0][0]));
+      $key=aaTxt($p['area_description']??null); if($key==='')$key=json_encode(aaBrJsNum($rings[0][0]));
       if(!isset($per[$key])||aaLevelRank($level)>aaLevelRank($per[$key]['niveau']))$per[$key]=['niveau'=>$level,'gebied'=>aaRondAf(aaSimplify($rings,120))];
     }
     $land[(string)$evid]=array_values($per);
