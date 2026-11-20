@@ -21,7 +21,7 @@ with urllib.request.urlopen(req,context=CTX,timeout=25) as resp:
  dom=_antwoord.get("result",_antwoord).get("data",{})
 if isinstance(dom,list):dom=dom[0] if dom else {}
 root=str(dom.get("documentroot","")) if isinstance(dom,dict) else ""
-if not re.fullmatch(r"/home[^/]+/[^/]+/(?:[A-Za-z0-9_.-]+/)*api\.a-alerts\.nl/?",root) and not ("api.a-alerts.nl" in root and re.fullmatch(r"/home[^/]+/[^/]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*",root)):
+if not re.fullmatch(r"/home[^/]*/[^/]+/(?:[A-Za-z0-9_.-]+/)*api\.a-alerts\.nl/?",root) and not ("api.a-alerts.nl" in root and re.fullmatch(r"/home[^/]*/[^/]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*",root)):
  raise RuntimeError("ISOLATED_DOCROOT_NOT_PROVEN")
 script=root.rstrip("/")+"/_core/collect.php"
 known=cp2("Cron","listcron")
