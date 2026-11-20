@@ -86,6 +86,7 @@ $until=microtime(true)+50;
 try{
   aaEnsureSchema(aaDb());
   $status=aaParse(aaKvGet('aa_d1'),null)?:[];
+  foreach(['klein_ms','klein','tellingen'] as $k)if(isset($status[$k])&&!is_array($status[$k]))unset($status[$k]);
   if(empty($status['vol_klaar'])){
     foreach(AA_D1_TABELLEN as $t){
       if(aaKvGet('aa_d1_rowid:'.$t)==='klaar')continue;
