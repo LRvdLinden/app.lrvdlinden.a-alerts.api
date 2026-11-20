@@ -57,6 +57,8 @@ for p in ["/v1/waarschuwingen","/v1/waarschuwingen?kind=1&vnog=1","/v1/waarschuw
 _,wa,_=get(W,"/v1/waarschuwingen?days=30&kind=1&vnog=1");_,wb,_=get(A,"/v1/waarschuwingen?days=30&kind=1&vnog=1")
 print("  VOLGORDE worker",[ (x["id"][:28],x["start"]) for x in (wa or [])[3:9]])
 print("  VOLGORDE eigen ",[ (x["id"][:28],x["start"]) for x in (wb or [])[3:9]])
+for x,y in zip(wa or [],wb or []):
+ if x.get("plaats")!=y.get("plaats"):print("  PLAATS",x["id"][:40],"worker",repr(x.get("plaats"))[:80],"eigen",repr(y.get("plaats"))[:80],"bijgewerkt",x.get("bijgewerkt"),y.get("bijgewerkt"))
 print("  IDS gelijk",sorted(x["id"] for x in wa or [])==sorted(x["id"] for x in wb or []))
 _,ws,_=get(W,"/v1/waarschuwingen?days=30&kind=1&vnog=1")
 for w in (ws or [])[:8]:
