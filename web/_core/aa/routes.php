@@ -6,6 +6,7 @@ declare(strict_types=1);
  */
 require_once __DIR__.'/meldingen.php';
 require_once __DIR__.'/vast.php';
+require_once __DIR__.'/waarschuwingen.php';
 
 function aaReply(int $status, mixed $body, array $extra=[]): never {
   http_response_code($status);
@@ -22,7 +23,7 @@ function aaReply(int $status, mixed $body, array $extra=[]): never {
 function aaRoute(string $path): void {
   $path=rtrim($path,'/')?:'/';
   $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');
-  static $eigen=['/v1/meldingen','/v1/locaties','/v1/veiligheidsregio','/v1/changelog','/v1/content/','/v1/app','/v1/posten/'];
+  static $eigen=['/v1/meldingen','/v1/locaties','/v1/veiligheidsregio','/v1/changelog','/v1/content/','/v1/app','/v1/posten/','/v1/waarschuwingen'];
   $hit=false; foreach($eigen as $p)if($path===$p||str_starts_with($path,rtrim($p,'/').'/')||($p===$path)){$hit=true;break;}
   if(!$hit)return;
   if($method==='OPTIONS')aaReply(204,null);
@@ -37,6 +38,13 @@ function aaRoute(string $path): void {
       $item=aaGetMelding($m[1]); if(!$item)aaReply(404,['error'=>'Not found']);
       $lijst=$item['incident']?aaIncidentMeldingen($item['incident']):[$item];
       aaReply(200,['guid'=>$item['guid'],'incident'=>$item['incident'],'meldingen'=>$lijst],['Cache-Control'=>'public, max-age=20']);
+    }
+    if($method==='GET'&&$path==='/v1/waarschuwingen')
+      aaReply(200,aaListWarnings($_GET['days']??null,($_GET['kind']??'')==='1',($_GET['vnog']??'')==='1'),['Cache-Control'=>'public, max-age=30']);
+    if($method==='GET'&&preg_match('#^/v1/waarschuwingen/([\w:.\-%+]{4,160})$#',$path,$m)){
+      $w=aaGetWarning(rawurldecode($m[1])); if(!$w)aaReply(404,['error'=>'Not found']);
+      $w['meldingen']=$w['bron']==='knmi'?[]:aaLinkedMeldingen($w);
+      aaReply(200,$w,['Cache-Control'=>'public, max-age=30']);
     }
     if($method==='GET'&&$path==='/v1/locaties')aaReply(200,aaLocatiesData(),['Cache-Control'=>'public, max-age=86400']);
     if($method==='GET'&&$path==='/v1/veiligheidsregio')aaReply(200,aaData('veiligheidsregio'),['Cache-Control'=>'public, max-age=86400']);

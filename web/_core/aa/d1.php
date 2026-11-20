@@ -17,7 +17,10 @@ const AA_D1_TABELLEN=['devices','device_prefs','device_install','admin_devices',
   'widget_sites','widget_blok','nieuws_liveblog','nieuws_stockfoto','waarschuwing_knmi','waarschuwingen','nieuws','nieuws_updates','installs',
   'install_days','visits','pageviews','downloads','melding_feedback','status_dag','status_push','widget_views','post_inzet','melding_routes','weather',
   'heli_posities','nieuws_fotos','kv','meldingen'];
-const AA_D1_KLEIN=['devices','device_prefs','device_install','admin_devices','admin_prefs','overrides','waarschuwing_overrides','status_incidenten','widget_blok'];
+/** Tables copied whole again until the switch, per interval in minutes (their own intake does not exist yet or they are
+ * written by the apps and the beheer). Each run reads every row once: together well within the free D1 allowance. */
+const AA_D1_KLEIN=[5=>['waarschuwingen','waarschuwing_knmi','waarschuwing_overrides','overrides'],
+  15=>['devices','device_prefs','device_install','admin_devices','admin_prefs','status_incidenten','widget_blok','nieuws','nieuws_updates','nieuws_liveblog','nieuws_stockfoto']];
 /** Tables the own engine writes itself: rows of the Worker never replace own rows there. */
 const AA_D1_EIGEN_WINT=['meldingen','post_inzet'];
 
@@ -91,15 +94,24 @@ try{
     $klaar=true; foreach(AA_D1_TABELLEN as $t)if(aaKvGet('aa_d1_rowid:'.$t)!=='klaar')$klaar=false;
     if($klaar){$status['vol_klaar']=aaIso(aaNow());}
     $status['vol_bezig']=aaIso(aaNow());
-  }elseif(aaNow()-(int)($status['klein_ms']??0)>=14*60000){
-    foreach(AA_D1_KLEIN as $t){
-      $rows=aaD1('SELECT * FROM '.$t.' LIMIT 20000');
-      // Removed on the Worker (a device that unsubscribed): removed here too.
-      aaDb()->beginTransaction(); aaDb()->exec('DELETE FROM `'.$t.'`'); aaD1Schrijf($t,$rows); aaDb()->commit();
-      $status['tellingen'][$t]=count($rows);
+  }else{
+    foreach(AA_D1_KLEIN as $min=>$tabellen){
+      if(aaNow()-(int)($status['klein_ms'][$min]??0)<($min*60000-30000))continue;
+      foreach($tabellen as $t){
+        $rows=aaD1('SELECT * FROM '.$t.' LIMIT 20000');
+        // Removed on the Worker (a device that unsubscribed, a hidden item): removed here too.
+        aaDb()->beginTransaction(); aaDb()->exec('DELETE FROM `'.$t.'`'); aaD1Schrijf($t,$rows); aaDb()->commit();
+        $status['tellingen'][$t]=count($rows);
+      }
+      if($min===15){
+        aaD1Schrijf('kv',aaD1("SELECT * FROM kv WHERE key LIKE 'content:%' OR key LIKE 'post_info:%'"));
+        $max=(int)aaDb()->query('SELECT COALESCE(MAX(at),0) FROM nieuws_fotos')->fetchColumn();
+        aaD1Schrijf('nieuws_fotos',aaD1('SELECT * FROM nieuws_fotos WHERE at > ?',[$max]));
+        $max=(int)aaDb()->query('SELECT COALESCE(MAX(at),0) FROM post_inzet')->fetchColumn();
+        aaD1Schrijf('post_inzet',aaD1('SELECT * FROM post_inzet WHERE at > ?',[$max-3600000]));
+      }
+      $status['klein_ms'][$min]=aaNow(); $status['klein'][$min]=aaIso(aaNow());
     }
-    $content=aaD1("SELECT * FROM kv WHERE key LIKE 'content:%'"); aaD1Schrijf('kv',$content);
-    $status['klein_ms']=aaNow(); $status['klein']=aaIso(aaNow());
   }
   $status['fout']=null; aaKvSet('aa_d1',aaJson($status));
   echo "d1 ".json_encode($status)."\n";

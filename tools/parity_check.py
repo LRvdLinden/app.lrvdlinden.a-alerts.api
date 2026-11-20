@@ -52,6 +52,13 @@ def los(path):
  sw,x,_=get(W,path);se,y,bron=get(A,path)
  d=diff(x,y);print("ROUTE",path,"worker",sw,"eigen",se,"bron",bron,"verschillen",len(d),";".join(d[:6]))
 for p in ["/v1/locaties","/v1/veiligheidsregio","/v1/changelog","/v1/app"]+["/v1/content/"+n for n in ("privacy","cookies","terms","disclaimer","hulp")]:los(p)
+for p in ["/v1/waarschuwingen","/v1/waarschuwingen?kind=1&vnog=1","/v1/waarschuwingen?days=30&kind=1&vnog=1"]:los(p)
+_,ws,_=get(W,"/v1/waarschuwingen?days=30&kind=1&vnog=1")
+for w in (ws or [])[:8]:
+ import urllib.parse as _u
+ p="/v1/waarschuwingen/"+_u.quote(w["id"],safe=":")
+ sw,x,_=get(W,p);se,y,bron=get(A,p);d=diff(x,y)
+ print("ROUTE /v1/waarschuwingen/{"+w["bron"]+"}","worker",sw,"eigen",se,"verschillen",len(d),";".join(d[:5]))
 import json as _j,pathlib
 for k in _j.loads(pathlib.Path("web/_core/aa/data/kazernes.json").read_text())[:58]:
  sw,x,_=get(W,"/v1/posten/"+k["id"]);se,y,bron=get(A,"/v1/posten/"+k["id"])
