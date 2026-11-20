@@ -17,6 +17,7 @@ jobs:
           g burgernet-active.json application/json "https://www.burgernet.nl/active?t=$(date +%s)"
           g burgernet-gemeente.html text/html https://www.burgernet.nl/gemeente/Oost-Nederland/APELDOORN
           for id in $(grep -o 'href="/burgernet/[0-9]\{4,\}"' burgernet-gemeente.html | grep -o '[0-9]\+' | sort -u | head -6); do g burgernet-$id.html text/html https://www.burgernet.nl/burgernet/$id; done
+          for id in 3987559 3977495 3967284 3967274; do g burgernet-$id.html text/html https://www.burgernet.nl/burgernet/$id; done
           g knmi-version.json application/json https://www.knmi.nl/api/v1/weather-warnings/version
           g knmi.json application/json https://www.knmi.nl/api/v1/weather-warnings.json
           g knmi.html text/html https://www.knmi.nl/nederland-nu/weer/waarschuwingen
