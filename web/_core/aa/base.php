@@ -27,7 +27,7 @@ function aaEnsureSchema(PDO $db): void {
   try{ if(aaKvGet('aa_schema')===$ver)return; }catch(Throwable){}
   foreach(preg_split('/;\s*\n/',$sql) as $part){
     $st=trim((string)preg_replace('/^\s*--[^\n]*\n/m','',$part)); if($st==='')continue;
-    if(!preg_match('/^(CREATE TABLE IF NOT EXISTS [a-z_]+ |ALTER TABLE [a-z_]+ ADD COLUMN IF NOT EXISTS [a-z_]+ )/',$st))throw new RuntimeException('aa_schema_statement');
+    if(!preg_match('/^(CREATE TABLE IF NOT EXISTS [a-z_]+ |ALTER TABLE [a-z_]+ ADD COLUMN IF NOT EXISTS [a-z_]+ |ALTER TABLE [a-z_]+ MODIFY COLUMN [a-z_]+ )/',$st))throw new RuntimeException('aa_schema_statement');
     $db->exec($st);
   }
   aaKvSet('aa_schema',$ver);

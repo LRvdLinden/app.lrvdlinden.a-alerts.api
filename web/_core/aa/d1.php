@@ -88,6 +88,8 @@ $until=microtime(true)+50;
 try{
   aaEnsureSchema(aaDb());
   $status=aaParse(aaKvGet('aa_d1'),null)?:[];
+  // Version 2 of the copy (wider columns): copy everything once more so values cut off before are complete.
+  if(($status['versie']??1)<2){ foreach(AA_D1_TABELLEN as $t)aaDb()->prepare('DELETE FROM kv WHERE `key` = ?')->execute(['aa_d1_rowid:'.$t]); $status=['versie'=>2]; }
   foreach(['klein_ms','klein','tellingen'] as $k)if(isset($status[$k])&&!is_array($status[$k]))unset($status[$k]);
   if(empty($status['vol_klaar'])){
     foreach(AA_D1_TABELLEN as $t){
