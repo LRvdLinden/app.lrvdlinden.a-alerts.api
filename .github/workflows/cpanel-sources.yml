@@ -20,6 +20,8 @@ jobs:
           VERKEER_URL: ${{ secrets.VERKEER_URL }}
           VERKEER_TOKEN: ${{ secrets.VERKEER_TOKEN }}
           ADSB_LOL_API_KEY: ${{ secrets.ADSB_LOL_API_KEY }}
+          P2000_CODE: ${{ secrets.P2000_CODE }}
+          P2000_URL: ${{ secrets.P2000_URL }}
           APN_TEAM_ID: ${{ secrets.APN_TEAM_ID }}
           APN_KEY_ID: ${{ secrets.APN_KEY_ID }}
           APN_P8_CERT: ${{ secrets.APN_P8_CERT }}

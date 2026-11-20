@@ -91,13 +91,28 @@ function aaKoyebMessage(string $text, bool &$heartbeatDone): int {
 
 $lock=aaKoyebSlot(); if(!$lock)exit(0);
 $start=microtime(true); $until=$start+AA_KOYEB_LOOPTIJD;
-$protocol=setting('KOYEB_SUBPROTOCOL');
-if($protocol===''||!preg_match('/^homey-[0-9a-f]{24}-nl\.lrvdlinden\.p2000$/',$protocol)){fwrite(STDERR,"KOYEB_IDENTITY_MISSING\n");exit(0);}
+/**
+ * How to connect: with P2000_CODE (given by the operator of the stream) the website login website-<unix seconds>-<code>,
+ * made fresh for every connection; without it the own synthetic Homey identity as before. The protocol holds the code:
+ * it is never logged or stored.
+ */
+function aaKoyebVerbinding(): ?array {
+  $url=trim(setting('P2000_URL')?:(setting('KOYEB_WEBSOCKET_URL')?:'wss://p2000-martijnpoppen.koyeb.app'));
+  if(!str_starts_with($url,'wss://'))return null;
+  $code=trim(setting('P2000_CODE'));
+  if(preg_match('/^[A-Za-z0-9]{8,128}$/',$code))return ['url'=>$url,'protocol'=>'website-'.time().'-'.$code,'soort'=>'website'];
+  $id=setting('KOYEB_SUBPROTOCOL');
+  if(preg_match('/^homey-[0-9a-f]{24}-nl\.lrvdlinden\.p2000$/',$id))return ['url'=>trim(setting('KOYEB_WEBSOCKET_URL')?:'wss://p2000-martijnpoppen.koyeb.app'),'protocol'=>$id,'soort'=>'homey'];
+  return null;
+}
+if(!aaKoyebVerbinding()){fwrite(STDERR,"KOYEB_LOGIN_MISSING\n");exit(0);}
 try{ aaEnsureSchema(aaDb()); }catch(Throwable $e){ fwrite(STDERR,'SCHEMA '.get_class($e)."\n"); exit(1); }
 $n=0; $berichten=0;
 while(microtime(true)<$until){
   try{
-    $ws=new AaWebSocket(setting('KOYEB_WEBSOCKET_URL')?:'wss://p2000-martijnpoppen.koyeb.app',$protocol);
+    $v=aaKoyebVerbinding(); if(!$v)break;
+    $ws=new AaWebSocket($v['url'],$v['protocol']);
+    aaKvSet('koyeb_login',$v['soort']);
     aaKvSet('koyeb_last_connected',(string)aaNow());
     if(aaKvGet('aa_koyeb_start')===null)aaKvSet('aa_koyeb_start',(string)aaNow());
     $hb=false; $hbAt=microtime(true);

@@ -21,7 +21,7 @@ root=str(d.get("documentroot","")) if isinstance(d,dict) else ""
 m=re.match(r"^(/home[^/]*/[^/]+)(?:/|$)",root)
 print("DOCROOT_CHECK",{"has_api_domain":"api.a-alerts.nl" in root,"has_home":root.startswith("/home")})
 if not m or "api.a-alerts.nl" not in root:raise RuntimeError("ISOLATED_DOCROOT_NOT_PROVEN")
-names=["P2000_PAGE_API_URL","VERKEER_URL","VERKEER_TOKEN","ADSB_LOL_API_KEY",
+names=["P2000_PAGE_API_URL","VERKEER_URL","VERKEER_TOKEN","ADSB_LOL_API_KEY","P2000_CODE","P2000_URL",
  # Same names as the secrets of the Cloudflare Worker, so the engine needs no translation.
  "APN_TEAM_ID","APN_KEY_ID","APN_P8_CERT","LRBEHEER_TOPIC","FCM_SERVICE_ACCOUNT","BEHEER_USER","BEHEER_PASSWORD",
  "WEB_WEATHERKIT_TEAM_ID","WEB_WEATHERKIT_KEY_ID","WEB_WEATHERKIT_P8","WEB_MAPKIT_JS_TEAM_ID","WEB_MAPKIT_JS_KEY_ID","WEB_MAPKIT_JS_P8",
@@ -36,6 +36,7 @@ for k,v in {"RETENTION_DAYS":"3","APN_TOPIC":"nl.lrvdlinden.p2000apeldoorn","MIN
 data["KOYEB_SUBPROTOCOL"]=os.getenv("KOYEB_SUBPROTOCOL","").strip() or "homey-a11ea1eaa11ea1eaa11ea1eb-nl.lrvdlinden.p2000"
 if not data:
  print("SOURCE_SECRETS_MISSING: configure at least one named source secret");sys.exit(0)
+print("P2000_CODE aanwezig:","ja" if os.getenv("P2000_CODE","").strip() else "nee")
 for key in ("P2000_PAGE_API_URL","VERKEER_URL"):
  if key in data:
   uri=urllib.parse.urlparse(data[key])
