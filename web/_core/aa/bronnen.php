@@ -17,7 +17,7 @@ require_once __DIR__.'/meldingen.php';
 require_once __DIR__.'/waarschuwingen.php';
 require_once __DIR__.'/nieuws.php';
 
-const AA_BRONNEN_MODUS='proef';
+const AA_BRONNEN_MODUS='actief';
 const AA_SOURCES=['nlalert'=>'https://api.public-warning.app/api/v1/providers/nl-alert/alerts','burgernet'=>'https://www.burgernet.nl/active',
   'burgernetSite'=>'https://www.burgernet.nl','knmi'=>'https://www.knmi.nl/api/v1/weather-warnings'];
 const AA_BRONNEN_LIJST=['nlalert','burgernet','knmi','kind','vnog'];

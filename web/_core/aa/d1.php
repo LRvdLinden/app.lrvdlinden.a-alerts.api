@@ -19,8 +19,10 @@ const AA_D1_TABELLEN=['devices','device_prefs','device_install','admin_devices',
   'heli_posities','nieuws_fotos','kv','meldingen'];
 /** Tables copied whole again until the switch, per interval in minutes (their own intake does not exist yet or they are
  * written by the apps and the beheer). Each run reads every row once: together well within the free D1 allowance. */
-const AA_D1_KLEIN=[5=>['waarschuwingen','waarschuwing_knmi','waarschuwing_overrides','overrides'],
-  15=>['devices','device_prefs','device_install','admin_devices','admin_prefs','status_incidenten','widget_blok','nieuws','nieuws_updates','nieuws_liveblog','nieuws_stockfoto','melding_routes']];
+// Waarschuwingen, waarschuwing_knmi, nieuws and nieuws_stockfoto come from the own intake (aa/bronnen.php) since 20-11-2026;
+// what the Worker beheer sets on them (overrides, additions, liveblog switch, hidden, photo) still comes along until the switch.
+const AA_D1_KLEIN=[5=>['waarschuwing_overrides','overrides'],
+  15=>['devices','device_prefs','device_install','admin_devices','admin_prefs','status_incidenten','widget_blok','nieuws_updates','nieuws_liveblog','melding_routes']];
 /** Tables the own engine writes itself: rows of the Worker never replace own rows there. */
 const AA_D1_EIGEN_WINT=['meldingen','post_inzet'];
 
@@ -109,7 +111,10 @@ try{
         $status['tellingen'][$t]=count($rows);
       }
       if($min===15){
-        aaD1Schrijf('kv',aaD1("SELECT * FROM kv WHERE key LIKE 'content:%' OR key LIKE 'post_info:%'"));
+        aaD1Schrijf('kv',aaD1("SELECT * FROM kv WHERE key LIKE 'content:%' OR key LIKE 'post_info:%' OR key = 'vnog_uit' OR key LIKE 'nieuws_stock:%'"));
+        // Beheer columns of news items (hidden, own photo), without overwriting what the own intake wrote.
+        $u=aaDb()->prepare('UPDATE nieuws SET hidden = ?, foto = ? WHERE id = ? AND (hidden <> ? OR NOT (foto <=> ?))');
+        foreach(aaD1('SELECT id, hidden, foto FROM nieuws WHERE hidden = 1 OR foto IS NOT NULL OR updated_at > ?',[aaNow()-2*86400000]) as $r)$u->execute([(int)$r['hidden'],$r['foto'],$r['id'],(int)$r['hidden'],$r['foto']]);
         $max=(int)aaDb()->query('SELECT COALESCE(MAX(at),0) FROM nieuws_fotos')->fetchColumn();
         aaD1Schrijf('nieuws_fotos',aaD1('SELECT * FROM nieuws_fotos WHERE at > ?',[$max]));
         $max=(int)aaDb()->query('SELECT COALESCE(MAX(at),0) FROM post_inzet')->fetchColumn();
