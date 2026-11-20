@@ -12,13 +12,14 @@ rooturl="https://cpanel04.zxcs.nl:2083"
 req=urllib.request.Request(rooturl+"/execute/DomainInfo/single_domain_data?domain=api.a-alerts.nl",headers=hdr)
 with urllib.request.urlopen(req,context=ssl.create_default_context(),timeout=30) as resp:
  response=json.load(resp)
-res=response.get("result",{})
+# UAPI answers with data at the top level ("result" only exists behind some proxies).
+res=response.get("result",response)
 print("CPANEL_DOMAIN_RESPONSE",{"has_result":bool(res),"status":res.get("status"),"error_count":len(res.get("errors") or []),"data_type":type(res.get("data")).__name__})
 d=res.get("data",{})
 if isinstance(d,list):d=d[0] if d else {}
 root=str(d.get("documentroot","")) if isinstance(d,dict) else ""
 m=re.match(r"^(/home[^/]*/[^/]+)(?:/|$)",root)
-print("DOCROOT_CHECK",{"has_api_domain":"api.a-alerts.nl" in root,"has_home":root.startswith("/home"),"length":len(root),"keys":sorted(d.keys()) if isinstance(d,dict) else []})
+print("DOCROOT_CHECK",{"has_api_domain":"api.a-alerts.nl" in root,"has_home":root.startswith("/home")})
 if not m or "api.a-alerts.nl" not in root:raise RuntimeError("ISOLATED_DOCROOT_NOT_PROVEN")
 names=["P2000_PAGE_API_URL","VERKEER_URL","VERKEER_TOKEN","ADSB_LOL_API_KEY"]
 data={key:os.getenv(key,"").strip() for key in names}
@@ -34,7 +35,7 @@ for key in ("P2000_PAGE_API_URL","VERKEER_URL"):
 def php_str(v):return "'"+v.replace("\\","\\\\").replace("'","\\'").replace("\r","").replace("\n","")+"'";
 content="<?php\ndeclare(strict_types=1);\nreturn [\n"+",\n".join("  "+php_str(k)+" => "+php_str(v) for k,v in data.items())+"\n];\n"
 p={"cpanel_jsonapi_user":u,"cpanel_jsonapi_apiversion":"2","cpanel_jsonapi_module":"Fileman",
-   "cpanel_jsonapi_func":"savefile","path":m.group(1)+"/aalerts-private","filename":"sources.php","content":content}
+   "cpanel_jsonapi_func":"savefile","dir":m.group(1)+"/aalerts-private","filename":"sources.php","content":content}
 req=urllib.request.Request(rooturl+"/json-api/cpanel",data=urllib.parse.urlencode(p).encode(),headers=hdr,method="POST")
 with urllib.request.urlopen(req,context=ssl.create_default_context(),timeout=35) as resp:
  result=json.load(resp).get("cpanelresult",{})

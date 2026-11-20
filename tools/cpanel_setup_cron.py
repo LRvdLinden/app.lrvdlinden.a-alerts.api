@@ -16,7 +16,9 @@ def cp2(mod,fn,**params):
  return raw.get("data",[])
 req=urllib.request.Request("https://cpanel04.zxcs.nl:2083/execute/DomainInfo/single_domain_data?domain=api.a-alerts.nl",headers=HEAD)
 with urllib.request.urlopen(req,context=CTX,timeout=25) as resp:
- dom=json.load(resp).get("result",{}).get("data",{})
+ _antwoord=json.load(resp)
+ # UAPI answers with data at the top level ("result" only exists behind some proxies).
+ dom=_antwoord.get("result",_antwoord).get("data",{})
 if isinstance(dom,list):dom=dom[0] if dom else {}
 root=str(dom.get("documentroot","")) if isinstance(dom,dict) else ""
 if not re.fullmatch(r"/home[^/]+/[^/]+/(?:[A-Za-z0-9_.-]+/)*api\.a-alerts\.nl/?",root) and not ("api.a-alerts.nl" in root and re.fullmatch(r"/home[^/]+/[^/]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*",root)):
