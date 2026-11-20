@@ -99,7 +99,8 @@ function apiRoute(string $path): bool {
       $tabellen=[];foreach(['meldingen','devices','device_prefs','waarschuwingen','nieuws','nieuws_updates','installs','post_inzet','heli_posities','overrides','kv'] as $t){try{$tabellen[$t]=(int)$db->query('SELECT COUNT(*) FROM `'.$t.'`')->fetchColumn();}catch(Throwable){$tabellen[$t]=null;}}
       $d1=aaParse(aaKvGet('aa_d1'),null);
       $adsb=aaParse(aaKvGet('adsb_fout'),null);
-      privateReply(200,['shadow'=>true,'tabellen'=>$tabellen,'d1_overname'=>$d1,'adsb_laatste_fout'=>$adsb,'p2000'=>['intake'=>$kv,'per_bron'=>$per,'worker_sinds_start'=>$spiegel,'ontbreekt_bij_eigen'=>$missing,
+      $adsbVia=aaParse(aaKvGet('adsb_via'),null);
+      privateReply(200,['shadow'=>true,'tabellen'=>$tabellen,'d1_overname'=>$d1,'adsb_laatste_fout'=>$adsb,'adsb_laatste_opvraag'=>$adsbVia,'p2000'=>['intake'=>$kv,'per_bron'=>$per,'worker_sinds_start'=>$spiegel,'ontbreekt_bij_eigen'=>$missing,
         'voorbeelden_ontbrekend'=>array_values(array_filter($mist)),'push'=>setting('PUSH_ACTIEF')==='1'?'aan':'uit (de Worker verstuurt de pushmeldingen)']]);
     }
     // Exact last answer of a Worker route, as stored by the mirror ("spiegel/meldingen", "spiegel/helikopters/status").

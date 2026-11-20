@@ -124,7 +124,6 @@ function aaHelikopters(): array {
   $geef=function($c)use($onlyRecent){unset($c['_at'],$c['_laatste']);return array_merge($c,$onlyRecent($c));};
   if(is_array($cached)&&$now-(int)($cached['_at']??0)<12000)return $geef($cached);
   // After a refusal (429) adsb.lol gets a minute of rest; meanwhile the last picture (greyed when old).
-  if(is_array($cached)&&$now<(int)(aaKvGet('adsb_pauze_tot')??0))return $geef($cached);
   $db=aaDb(); $lock=(int)$db->query("SELECT GET_LOCK('aalerts_adsb', 0)")->fetchColumn()===1;
   if(!$lock){ if(is_array($cached))return $geef($cached); $db->query("SELECT GET_LOCK('aalerts_adsb', 10)"); $lock=true; }
   $cached=aaParse(aaKvGet('adsb_cache'),null)?:$cached;
@@ -132,12 +131,29 @@ function aaHelikopters(): array {
   $laatste=is_array($cached)?($cached['_laatste']??[]):[];
   $snap=aaParse(aaKvGet('lucht:last-known-v1'),null); if(!is_array($snap))$snap=['helikopters'=>[],'lucht'=>[]];
   try{
-    $ch=curl_init('https://api.adsb.lol/v2/point/52.2/5.4/160');
-    curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>8,CURLOPT_CONNECTTIMEOUT=>4,CURLOPT_ENCODING=>'',CURLOPT_HTTPHEADER=>array_merge(['Accept: application/json','User-Agent: A-Alerts/1.0 (+https://a-alerts.nl)'],
-      // The key of adsb.lol (private configuration), when there is one: a shared host IP gets refused without it.
-      setting('ADSB_LOL_API_KEY')!==''?['api-auth: '.setting('ADSB_LOL_API_KEY')]:[])]);
-    $raw=curl_exec($ch); $code=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); $cerr=curl_errno($ch); curl_close($ch);
-    if($code!==200)throw new RuntimeException('ADS-B HTTP '.$code.($cerr?' curl '.$cerr:'').' '.substr(trim((string)preg_replace('/\s+/',' ',strip_tags((string)$raw))),0,120));
+    $haal=function(string $url,array $extra){
+      $ch=curl_init($url);
+      curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>8,CURLOPT_CONNECTTIMEOUT=>4,CURLOPT_ENCODING=>'',
+        CURLOPT_HTTPHEADER=>array_merge(['Accept: application/json','User-Agent: A-Alerts/1.0 (+https://a-alerts.nl)'],$extra)]);
+      $raw=curl_exec($ch); $code=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); $cerr=curl_errno($ch); curl_close($ch);
+      return [$code,$raw,$cerr];
+    };
+    // First adsb.lol itself. It refuses the shared address of the hosting now and then (HTTP 429): then a minute of rest
+    // for adsb.lol, and meanwhile the same adsb.lol request through the own Koyeb service (/adsb, with the token).
+    // Only as a reserve: positions come from adsb.lol either way, never from the NDW traffic data.
+    $code=0; $raw=''; $cerr=0; $via='direct';
+    if(aaNow()>=(int)(aaKvGet('adsb_pauze_tot')??0)){
+      [$code,$raw,$cerr]=$haal('https://api.adsb.lol/v2/point/52.2/5.4/160',setting('ADSB_LOL_API_KEY')!==''?['api-auth: '.setting('ADSB_LOL_API_KEY')]:[]);
+      if($code===429)aaKvSet('adsb_pauze_tot',(string)(aaNow()+60000));
+    }
+    if($code!==200&&setting('VERKEER_URL')!==''&&setting('VERKEER_TOKEN')!==''){
+      $direct=$code;
+      [$code,$raw,$cerr]=$haal(rtrim(setting('VERKEER_URL'),'/').'/adsb?lat=52.2&lon=5.4&nm=160',['Authorization: Bearer '.setting('VERKEER_TOKEN')]);
+      $via='koyeb';
+      if($code!==200)$code=$code?:$direct;
+    }
+    try{ aaKvSet('adsb_via',aaJson(['at'=>aaIso(aaNow()),'via'=>$via,'http'=>$code])); }catch(Throwable){}
+    if($code!==200)throw new RuntimeException('ADS-B HTTP '.$code.' via '.$via.($cerr?' curl '.$cerr:''));
     $body=json_decode((string)$raw,true); if(!is_array($body)||!is_array($body['ac']??null))throw new RuntimeException('Invalid ADS-B payload');
     $bnow=is_numeric($body['now']??null)&&(float)$body['now']>0?(int)$body['now']:aaNow();
     $learned=aaKvPrefix('heli_hex:');
