@@ -44,7 +44,9 @@ if m:
   # Prefer the path derived from the isolated docroot; alternate cPanel homedir
   # representations may include trailing slash or other account aliases.
   home=m.group(1)
-if not re.fullmatch(r"/home[^/]*/[^/]+",home):raise RuntimeError("Account home unverified")
+if not re.fullmatch(r"/home[^/]*/[^/]+",home):
+ print("HOME_DIAGNOSTIC",{"root_starts_home":root.startswith("/home"),"home_starts_home":home.startswith("/home"),"root_parts":len(root.split("/")),"home_parts":len(home.split("/")),"has_docroot_match":bool(m),"domain_field_matches":d.get("domain")=="api.a-alerts.nl"})
+ raise RuntimeError("Account home unverified")
 if "api.a-alerts.nl" not in root and d.get("domain")!="api.a-alerts.nl":raise RuntimeError("Wrong domain")
 target=home+"/aalerts-private"
 source_files=names(home);destination_files=names(target)
