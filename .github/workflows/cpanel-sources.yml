@@ -20,4 +20,24 @@ jobs:
           VERKEER_URL: ${{ secrets.VERKEER_URL }}
           VERKEER_TOKEN: ${{ secrets.VERKEER_TOKEN }}
           ADSB_LOL_API_KEY: ${{ secrets.ADSB_LOL_API_KEY }}
+          APN_TEAM_ID: ${{ secrets.APN_TEAM_ID }}
+          APN_KEY_ID: ${{ secrets.APN_KEY_ID }}
+          APN_P8_CERT: ${{ secrets.APN_P8_CERT }}
+          LRBEHEER_TOPIC: ${{ secrets.LRBEHEER_TOPIC }}
+          FCM_SERVICE_ACCOUNT: ${{ secrets.FCM_SERVICE_ACCOUNT }}
+          BEHEER_USER: ${{ secrets.BEHEER_USER }}
+          BEHEER_PASSWORD: ${{ secrets.BEHEER_PASSWORD }}
+          WEB_WEATHERKIT_TEAM_ID: ${{ secrets.WEB_WEATHERKIT_TEAM_ID }}
+          WEB_WEATHERKIT_KEY_ID: ${{ secrets.WEB_WEATHERKIT_KEY_ID }}
+          WEB_WEATHERKIT_P8: ${{ secrets.WEB_WEATHERKIT_P8 }}
+          WEB_MAPKIT_JS_TEAM_ID: ${{ secrets.WEB_MAPKIT_JS_TEAM_ID }}
+          WEB_MAPKIT_JS_KEY_ID: ${{ secrets.WEB_MAPKIT_JS_KEY_ID }}
+          WEB_MAPKIT_JS_P8: ${{ secrets.WEB_MAPKIT_JS_P8 }}
+          MAPS_SERVER_API_TEAM_ID: ${{ secrets.MAPS_SERVER_API_TEAM_ID }}
+          MAPS_SERVER_API_KEY_ID: ${{ secrets.MAPS_SERVER_API_KEY_ID }}
+          MAPS_SERVER_API_P8: ${{ secrets.MAPS_SERVER_API_P8 }}
+          KNMI_WMS_KEY: ${{ secrets.KNMI_WMS_KEY }}
+          HOMEY_WEBHOOK_ID: ${{ secrets.HOMEY_WEBHOOK_ID }}
+          SITE_ORIGINS: ${{ secrets.SITE_ORIGINS }}
+          STATUS_WEB_URL: ${{ secrets.STATUS_WEB_URL }}
         run: python3 tools/cpanel_sources.py
