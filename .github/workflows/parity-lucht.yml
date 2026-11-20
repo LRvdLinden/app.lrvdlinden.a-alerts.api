@@ -1,0 +1,15 @@
+name: Vergelijk luchtvaart, verkeer, radar en kaart (alleen lezen)
+on:
+  push:
+    branches: [main]
+    paths: ["tools/parity_lucht.py", ".github/workflows/parity-lucht.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/parity_lucht.py
