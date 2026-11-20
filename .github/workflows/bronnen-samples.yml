@@ -1,0 +1,29 @@
+name: Voorbeelden van de bronnen ophalen (alleen lezen)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  samples:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Openbare bronnen ophalen
+        run: |
+          mkdir -p s && cd s
+          UA="A-Alerts/2.0 (+https://a-alerts.nl)"
+          g(){ curl -sS --max-time 20 -A "$UA" -H "Accept: $2" -o "$1" "$3" -w "$1 %{http_code} %{size_download}\n" || echo "$1 fout"; }
+          g nlalert.json application/json https://api.public-warning.app/api/v1/providers/nl-alert/alerts
+          g burgernet-active.json application/json "https://www.burgernet.nl/active?t=$(date +%s)"
+          g burgernet-gemeente.html text/html https://www.burgernet.nl/gemeente/Oost-Nederland/APELDOORN
+          for id in $(grep -o 'href="/burgernet/[0-9]\{4,\}"' burgernet-gemeente.html | grep -o '[0-9]\+' | sort -u | head -6); do g burgernet-$id.html text/html https://www.burgernet.nl/burgernet/$id; done
+          g knmi-version.json application/json https://www.knmi.nl/api/v1/weather-warnings/version
+          g knmi.json application/json https://www.knmi.nl/api/v1/weather-warnings.json
+          g knmi.html text/html https://www.knmi.nl/nederland-nu/weer/waarschuwingen
+          g kind.json application/json https://services.burgernet.nl/landactiehost/api/v1/alerts
+          g vnog-actief.json application/json "https://www.vnog.nl/api/v1/incidents?municipality=47,66&status=true"
+          g vnog-alles.json application/json "https://www.vnog.nl/api/v1/incidents?municipality=47,66"
+          g politie.json application/json "https://api.politie.nl/v4/nieuws?language=nl&lat=52.2112&lon=5.9699&radius=25&maxnumberofitems=25&offset=0"
+          for p in apeldoorn beekbergen ugchelen loenen teuge hoenderloo; do g 112-$p.xml "application/rss+xml, application/xml" https://112nieuws.net/tag/$p/feed/; done
+      - uses: actions/upload-artifact@v4
+        with: { name: bronnen-samples, path: s, retention-days: 3 }
