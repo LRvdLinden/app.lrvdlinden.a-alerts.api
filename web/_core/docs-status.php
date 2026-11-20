@@ -38,7 +38,8 @@ function docsRouteInEngine(array $route): bool {
   // The own API routes of this server (status, sources, comparison, mirror) live in private-api.php.
   if(($route['group']??'')==='Eigen API'&&($route['status']??'')==='supported')return true;
   $parts=array_values(array_filter(preg_split('/\{[^}]+\}/',(string)$route['path']),fn($p)=>$p!==''&&$p!=='/'));
-  if(!$parts)return false;
+  // Root route "/": no literal part, so look for its exact path check.
+  if(!$parts){ foreach($files as $code)if(str_contains($code,"\$path==='".(string)$route['path']."'"))return true; return false; }
   foreach($files as $code){
     $all=true;
     foreach($parts as $p){
@@ -114,8 +115,7 @@ function docsLiveState(): array {
     $last=$aa?(int)(docsScalar($db,'SELECT MAX(updated_at) FROM waarschuwingen WHERE bron = ?',[$b])??0):0;
     $r=$run($b==='vermistkind'||$b==='amber'?'kind':$b);
     $out['bronnen'][]=['id'=>$b,'naam'=>$naam,'icoon'=>$ico,'staat'=>$eigenBronnen?'live':($k5&&$now-$k5<1200000?'overname':($d1?'fout':'gepland')),'laatst'=>$eigenBronnen?(int)$actief['at_ms']:$k5,
-      'detail'=>"$n opgeslagen, $act actief, laatste wijziging ".docsAgo($last?:null).'. '.($eigenBronnen?'Eigen inname actief.':'Gegevens via de overname uit de Worker.'.$proefTekst($b==='amber'||$b==='vermistkind'?'kind':$b))
-        .($r?' Eigen testcollector: '.($r['ok']?'ok':'fout '.(string)$r['fout']).', '.docsAgo($r['at']).'.':'')];
+      'detail'=>"$n opgeslagen, $act actief, laatste wijziging ".docsAgo($last?:null).'. '.($eigenBronnen?'Eigen inname actief.':'Gegevens via de overname uit de Worker.'.$proefTekst($b==='amber'||$b==='vermistkind'?'kind':$b))];
   }
   // --- news per kind
   foreach([['politie','Politie.nl-nieuws','/images/website/icon_politie.png','politie'],['regionaal','112nieuws (regionaal)','/images/website/nieuws/112-brand-1.webp','112nieuws'],
@@ -124,7 +124,7 @@ function docsLiveState(): array {
     $last=$aa?(int)(docsScalar($db,'SELECT MAX(updated_at) FROM nieuws WHERE soort = ?',[$s])??0):0;
     $r=$src?$run($src):null;
     $out['bronnen'][]=['id'=>'nieuws-'.$s,'naam'=>$naam,'icoon'=>$ico,'staat'=>$eigenBronnen?'live':($k15&&$now-$k15<2400000?'overname':($d1?'fout':'gepland')),'laatst'=>$eigenBronnen?(int)$actief['at_ms']:$k15,
-      'detail'=>"$n artikelen, laatste wijziging ".docsAgo($last?:null).'. '.($eigenBronnen?'Eigen inname actief.':'Via de overname uit de Worker.'.($proefRecent?' Eigen inname draait als proef en schrijft nog niets.':'')).($r?' Eigen testcollector: '.($r['ok']?'ok':'fout').', '.docsAgo($r['at']).'.':'')];
+      'detail'=>"$n artikelen, laatste wijziging ".docsAgo($last?:null).'. '.($eigenBronnen?'Eigen inname actief.':'Via de overname uit de Worker.'.($proefRecent?' Eigen inname draait als proef en schrijft nog niets.':''))];
   }
   // --- aircraft (adsb.lol)
   $heliPos=$aa?(int)(docsScalar($db,'SELECT MAX(at) FROM heli_posities')??0):0;

@@ -36,7 +36,10 @@ jobs+=[("heli","*", "*/1"),("verkeer","*", "*/1")]
 jobs+=[("status","*", "*/1")]
 # Paused groups get no cron job and an existing one is removed. p2000: the p2000.page key is personal and limited to
 # a number of IP addresses; the production Worker polls it already, so a second poller from this server can lock it out.
-PAUSED={x for x in os.getenv("AALERTS_CRON_PAUSED","p2000").split(",") if x}
+# The first test collectors of collect.php (alerts, news, air, traffic, reference) are replaced by the engine in
+# aa/ (bronnen, heli, verkeer) and are paused: they only added load (adsb.lol refuses the host when asked too often).
+# The Worker mirror (worker) stays for the comparisons until the switch.
+PAUSED={x for x in os.getenv("AALERTS_CRON_PAUSED","p2000,alerts,news,air,traffic,reference").split(",") if x}
 for row in sorted([x for x in known if isinstance(x,dict)],key=lambda x:-int(x.get("count") or 0)):
  tag=re.search(r"# aalerts-api-([a-z0-9]+)\s*$",str(row.get("command","")))
  if not tag or tag.group(1) not in PAUSED:continue
