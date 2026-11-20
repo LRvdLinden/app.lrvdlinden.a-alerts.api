@@ -1,0 +1,16 @@
+name: Eigen inname bronnen (alleen lezen)
+on:
+  push:
+    branches: [main]
+    paths: ["tools/parity_bronnen.py", ".github/workflows/parity-bronnen.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inname:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/parity_bronnen.py
+      - run: python3 tools/parity_check.py
