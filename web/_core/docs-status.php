@@ -98,15 +98,21 @@ function docsLiveState(): array {
 
   $k5=docsMsOf((string)(($d1['klein']??[])[5]??($d1['klein']??[])['5']??'')); $k15=docsMsOf((string)(($d1['klein']??[])[15]??($d1['klein']??[])['15']??''));
   // --- warnings per source: own intake module present, else data from the D1 copy
-  $eigenBronnen=docsModule('bronnen.php')||docsModule('routes-bronnen.php');
+  // Own intake of warnings and news (aa/bronnen.php): "actief" writes and reports in kv aa_bronnen; "proef" only reads the
+  // sources, compares with the stored data and reports in kv aa_bronnen_proef. Only a recent "actief" report counts as live.
+  $actief=json_decode((string)docsKv($db,'aa_bronnen'),true); $proef=json_decode((string)docsKv($db,'aa_bronnen_proef'),true);
+  $eigenBronnen=is_array($actief)&&$now-(int)($actief['at_ms']??0)<300000;
+  $proefRecent=!$eigenBronnen&&is_array($proef)&&$now-(int)($proef['at_ms']??0)<1500000;
+  $proefTekst=function(string $b)use($proef,$proefRecent){ if(!$proefRecent)return ''; $r=$proef[$b]??null; $v=is_array($r)?(int)($r['verschillen']??0):0;
+    return ' Proefdraai eigen inname ('.docsAgo((int)$proef['at_ms']).'): '.($v?"$v verschillen met de huidige gegevens":'geen verschillen').'; schrijft nog niets.'; };
   foreach([['nlalert','NL-Alert','/images/website/logo_nlalert.png'],['burgernet','Burgernet','/images/website/icon_burgernet.png'],['knmi','KNMI-weerwaarschuwingen','/images/website/icon_knmi.png'],
            ['amber','AMBER Alert','/images/website/logo_amber.png'],['vermistkind','Vermist Kind Alert','/images/website/icon_vermistkind.png'],['vnog','VNOG (Veiligheidsregio)','/images/website/logo_vnog.png']] as [$b,$naam,$ico]){
     $n=$aa?(int)docsScalar($db,'SELECT COUNT(*) FROM waarschuwingen WHERE bron = ?',[$b]):0;
     $act=$aa?(int)docsScalar($db,"SELECT COUNT(*) FROM waarschuwingen WHERE bron = ? AND status != 'beeindigd'",[$b]):0;
     $last=$aa?(int)(docsScalar($db,'SELECT MAX(updated_at) FROM waarschuwingen WHERE bron = ?',[$b])??0):0;
     $r=$run($b==='vermistkind'||$b==='amber'?'kind':$b);
-    $out['bronnen'][]=['id'=>$b,'naam'=>$naam,'icoon'=>$ico,'staat'=>$eigenBronnen?'live':($k5&&$now-$k5<1200000?'overname':($d1?'fout':'gepland')),'laatst'=>$eigenBronnen?($last?:null):$k5,
-      'detail'=>"$n opgeslagen, $act actief, laatste wijziging ".docsAgo($last?:null).'. '.($eigenBronnen?'Eigen inname actief.':'Gegevens via de overname uit de Worker; eigen inname volgt.')
+    $out['bronnen'][]=['id'=>$b,'naam'=>$naam,'icoon'=>$ico,'staat'=>$eigenBronnen?'live':($k5&&$now-$k5<1200000?'overname':($d1?'fout':'gepland')),'laatst'=>$eigenBronnen?(int)$actief['at_ms']:$k5,
+      'detail'=>"$n opgeslagen, $act actief, laatste wijziging ".docsAgo($last?:null).'. '.($eigenBronnen?'Eigen inname actief.':'Gegevens via de overname uit de Worker.'.$proefTekst($b==='amber'||$b==='vermistkind'?'kind':$b))
         .($r?' Eigen testcollector: '.($r['ok']?'ok':'fout '.(string)$r['fout']).', '.docsAgo($r['at']).'.':'')];
   }
   // --- news per kind
@@ -115,8 +121,8 @@ function docsLiveState(): array {
     $n=$aa?(int)docsScalar($db,'SELECT COUNT(*) FROM nieuws WHERE soort = ?',[$s]):0;
     $last=$aa?(int)(docsScalar($db,'SELECT MAX(updated_at) FROM nieuws WHERE soort = ?',[$s])??0):0;
     $r=$src?$run($src):null;
-    $out['bronnen'][]=['id'=>'nieuws-'.$s,'naam'=>$naam,'icoon'=>$ico,'staat'=>$eigenBronnen?'live':($k15&&$now-$k15<2400000?'overname':($d1?'fout':'gepland')),'laatst'=>$eigenBronnen?($last?:null):$k15,
-      'detail'=>"$n artikelen, laatste wijziging ".docsAgo($last?:null).'. '.($eigenBronnen?'Eigen inname actief.':'Via de overname uit de Worker; eigen inname volgt.').($r?' Eigen testcollector: '.($r['ok']?'ok':'fout').', '.docsAgo($r['at']).'.':'')];
+    $out['bronnen'][]=['id'=>'nieuws-'.$s,'naam'=>$naam,'icoon'=>$ico,'staat'=>$eigenBronnen?'live':($k15&&$now-$k15<2400000?'overname':($d1?'fout':'gepland')),'laatst'=>$eigenBronnen?(int)$actief['at_ms']:$k15,
+      'detail'=>"$n artikelen, laatste wijziging ".docsAgo($last?:null).'. '.($eigenBronnen?'Eigen inname actief.':'Via de overname uit de Worker.'.($proefRecent?' Eigen inname draait als proef en schrijft nog niets.':'')).($r?' Eigen testcollector: '.($r['ok']?'ok':'fout').', '.docsAgo($r['at']).'.':'')];
   }
   // --- aircraft (adsb.lol)
   $heliPos=$aa?(int)(docsScalar($db,'SELECT MAX(at) FROM heli_posities')??0):0;
@@ -134,22 +140,26 @@ function docsLiveState(): array {
   $apple=docsModule('routes-apple.php');
   $wAt=$aa?(int)(docsScalar($db,'SELECT MAX(fetched_at) FROM weather')??0):0; $rAt=$aa?(int)(docsScalar($db,'SELECT MAX(at) FROM melding_routes')??0):0;
   $out['bronnen'][]=['id'=>'apple','naam'=>'Apple-diensten (WeatherKit, Maps, MapKit JS)','icoon'=>'/images/website/route_applemaps.png',
-    'staat'=>$apple?'deels':(docsSet('WEB_WEATHERKIT_P8')?'gepland':'gepland'),'laatst'=>max($wAt,$rAt)?:null,
+    // Own activity: weather or routes fetched after the copy of the Worker database was made.
+    'staat'=>$apple&&max($wAt,$rAt)>(docsMsOf($d1['vol_klaar']??null)??PHP_INT_MAX)?'live':($apple?'deels':'gepland'),'laatst'=>max($wAt,$rAt)?:null,
     'detail'=>'Sleutels '.(docsSet('WEB_WEATHERKIT_P8')&&docsSet('MAPS_SERVER_API_P8')&&docsSet('WEB_MAPKIT_JS_P8')?'aanwezig':'nog niet compleet').'. '.($apple?'Eigen routes staan op de server.':'Eigen routes nog in aanbouw.')];
   $push=setting('PUSH_ACTIEF')==='1';
   $out['bronnen'][]=['id'=>'push','naam'=>'Pushmeldingen (APNs, FCM)','icoon'=>'/images/website/aalerts-icon-180.png',
     'staat'=>$push?'live':(docsModule('push.php')?'uit':'gepland'),'laatst'=>null,
     'detail'=>($push?'Versturen staat aan.':'Versturen staat uit: de Worker verstuurt nu, anders krijgt iedereen alles dubbel.').' Sleutels '.(docsSet('APN_P8_CERT')&&docsSet('FCM_SERVICE_ACCOUNT')?'aanwezig':'nog niet compleet').'.'];
 
+  $staat=function(string $id)use(&$out){ foreach($out['bronnen'] as $b)if($b['id']===$id)return $b['staat']; return null; };
   // --- building blocks of the migration
   $schema=docsKv($db,'aa_schema')!==null;
   $out['onderdelen']=[
     ['naam'=>'Eigen database (MariaDB, zelfde tabellen als de Worker)','staat'=>$schema?'live':'gepland','uitleg'=>$schema?'Schema geïnstalleerd.':'Nog niet geïnstalleerd.'],
     ['naam'=>'P2000-inname zonder Cloudflare','staat'=>$p2State,'uitleg'=>'Eigen WebSocket naar Koyeb, elke minuut via cron, met plaatsfilter, ontdubbeling en incidentkoppeling.'],
     ['naam'=>'Meldingen, waarschuwingen, nieuws en vaste routes','staat'=>docsModule('meldingen.php')&&docsModule('waarschuwingen.php')&&docsModule('nieuws.php')?'live':'deels','uitleg'=>'Leesroutes draaien in de eigen motor en worden met de vergelijkingsworkflow tegen workers.dev gecontroleerd.'],
-    ['naam'=>'Eigen inname waarschuwingen en nieuws','staat'=>$eigenBronnen?'live':'gepland','uitleg'=>$eigenBronnen?'Eigen collectors actief.':'Nu via de overname uit de Worker-database; eigen collectors volgen.'],
-    ['naam'=>'Helikopters, luchtvaart, verkeer en radar','staat'=>$lucht?'deels':'gepland','uitleg'=>$lucht?'Module staat op de server; zie de bronnen hierboven.':'In aanbouw.'],
-    ['naam'=>'Apple-diensten, toestellen, statistieken en beheer','staat'=>$apple?'deels':'gepland','uitleg'=>$apple?'Module staat op de server.':'In aanbouw.'],
+    ['naam'=>'Eigen inname waarschuwingen en nieuws','staat'=>$eigenBronnen?'live':($proefRecent?'deels':'gepland'),'uitleg'=>$eigenBronnen?'Eigen inname schrijft zelf (NL-Alert, Burgernet, KNMI, Amber/Vermist Kind, VNOG, politie.nl, 112nieuws).':($proefRecent?'Draait als proef: leest alle bronnen en vergelijkt met de huidige gegevens, schrijft nog niets. Gegevens komen nog via de overname uit de Worker.':'Nu via de overname uit de Worker-database; eigen inname volgt.')],
+    ['naam'=>'Helikopters, luchtvaart, verkeer en radar','staat'=>$staat('adsb')==='live'&&$staat('verkeer')==='live'?'live':($lucht?'deels':'gepland'),
+      'uitleg'=>$lucht?'Module staat op de server. Live zodra zowel de eigen vliegtuigdata als het eigen verkeer recent binnenkomen (zie hierboven).':'In aanbouw.'],
+    ['naam'=>'Apple-diensten, toestellen, statistieken en beheer','staat'=>$staat('apple')==='live'?'live':($apple?'deels':'gepland'),
+      'uitleg'=>$apple?'Module staat op de server. Live zodra de eigen motor zelf weer of routes heeft opgehaald.':'In aanbouw.'],
     ['naam'=>'Pushmeldingen','staat'=>$push?'live':(docsModule('push.php')?'uit':'gepland'),'uitleg'=>'Pas aan bij de overstap.'],
     ['naam'=>'Overstap van de apps en site naar api.a-alerts.nl','staat'=>'gepland','uitleg'=>'Alleen na uitdrukkelijke goedkeuring; de Worker blijft tot dan productie.'],
   ];
