@@ -16,7 +16,9 @@ def api2(fn,**params):
  result=call("https://cpanel04.zxcs.nl:2083/json-api/cpanel",form).get("cpanelresult",{})
  if result.get("event",{}).get("result")!=1:raise RuntimeError("Fileman "+fn+" failed")
  return result.get("data")
-dom=call("https://cpanel04.zxcs.nl:2083/execute/DomainInfo/single_domain_data?domain=api.a-alerts.nl").get("result",{}).get("data",{})
+# UAPI answers with data at the top level ("result" only exists behind some proxies).
+_antwoord=call("https://cpanel04.zxcs.nl:2083/execute/DomainInfo/single_domain_data?domain=api.a-alerts.nl")
+dom=_antwoord.get("result",_antwoord).get("data",{})
 if isinstance(dom,list):dom=dom[0] if dom else {}
 root=dom.get("documentroot","") if isinstance(dom,dict) else ""
 home=re.match(r"^(/home[^/]*/[^/]+)(?:/|$)",root)
@@ -24,7 +26,9 @@ if not home or "api.a-alerts.nl" not in root:raise RuntimeError("Isolated api.a-
 directory=home.group(1)+"/aalerts-private"
 one_time=secrets.token_hex(32)
 content="<?php\ndeclare(strict_types=1);\nreturn ['hash'=>'"+hashlib.sha256(one_time.encode()).hexdigest()+"','expires'=>"+str(int(time.time()+300))+"];\n"
-api2("savefile",path=directory,filename="schema-once.php",content=content)
+# API 2 Fileman::savefile takes "dir" (with "path" the file landed in the account home, which is how the private
+# config got misplaced before).
+api2("savefile",dir=directory,filename="schema-once.php",content=content)
 print("SETUP_GRANT: created short-lived authorization outside web root.")
 try:
  req=urllib.request.Request("https://api.a-alerts.nl/v1/beheer/install",data=b"{}",method="POST",headers={"Authorization":"Bearer "+one_time,"Accept":"application/json"})
@@ -38,7 +42,7 @@ try:
  print("SCHEMA_INSTALL: OK, tables processed:",result.get("created_or_existing_tables"))
 finally:
  try:
-  api2("fileop",op="trash",sourcefiles="aalerts-private/schema-once.php",doubledecode="1")
+  api2("fileop",op="unlink",sourcefiles=directory+"/schema-once.php",doubledecode="0")
   print("SETUP_GRANT: removed from active private configuration.")
  except Exception:
   print("SETUP_GRANT: cleanup requires review; token expires automatically in 5 minutes.")
