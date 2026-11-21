@@ -34,7 +34,7 @@ function aaRouteLucht(string $path): void {
       $items=array_values(array_filter(is_array($k['items']??null)?$k['items']:[],fn($i)=>(aaMs($i['einde']??null)??0)>=$nu));
       foreach($items as &$i)$i['status']=(aaMs($i['start'])??0)>$nu?'verwacht':'actief'; unset($i);
       aaReply(200,['bijgewerkt'=>is_array($k)?aaIso((int)($k['at']??0)):null,'items'=>$items,'bron'=>'KNMI','link'=>'https://www.knmi.nl/nederland-nu/weer/waarschuwingen'],['Cache-Control'=>'public, max-age=120']); }
-    // Raw ADS-B of the last read (readsb format, adsb.lol/adsb.fi, ODbL): reserve of the old Worker. Older than a minute: 503.
+    // Raw ADS-B of the last read (readsb format, from the source of that round: adsb.lol/adsb.fi/airplanes.live/OpenSky): reserve of the old Worker. Older than a minute: 503.
     if($method==='GET'&&$path==='/v1/adsb'){ $r=aaKvRow('adsb_ruw'); if(!$r||aaNow()-(int)$r['at']>60000)aaReply(503,['error'=>'Geen verse ADS-B-gegevens']);
       http_response_code(200); header('Content-Type: application/json'); header('Cache-Control: public, max-age=10'); header('Access-Control-Allow-Origin: *'); echo $r['value']; exit; }
     if($method==='GET'&&$path==='/v1/verkeer'){ require_once __DIR__.'/verkeer-lib.php';

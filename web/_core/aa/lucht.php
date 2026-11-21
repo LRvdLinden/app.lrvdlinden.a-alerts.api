@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
 /**
- * Helicopters (trauma, police) and the layer "Defensie en overheid" from adsb.lol (ODbL): heli.js and lucht.js.
+ * Helicopters (trauma, police) and the layer "Defensie en overheid" from open ADS-B sources in turn (aa/adsb-bronnen.php:
+ * adsb.lol, adsb.fi, airplanes.live, OpenSky, Koyeb relay): heli.js and lucht.js.
  * One upstream request per 12 seconds for every caller together (file cache with a lock), as the Worker does with its
  * memo and edge cache. The last known positions are kept 90 seconds so the map does not flicker.
  */
@@ -134,42 +135,10 @@ function aaHelikopters(): array {
   $laatste=is_array($cached)?($cached['_laatste']??[]):[];
   $snap=aaParse(aaKvGet('lucht:last-known-v1'),null); if(!is_array($snap))$snap=['helikopters'=>[],'lucht'=>[]];
   try{
-    $haal=function(string $url,array $extra){
-      $ch=curl_init($url);
-      curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>8,CURLOPT_CONNECTTIMEOUT=>4,CURLOPT_ENCODING=>'',
-        CURLOPT_HTTPHEADER=>array_merge(['Accept: application/json','User-Agent: A-Alerts/1.0 (+https://a-alerts.nl)'],$extra),
-        CURLOPT_HEADERFUNCTION=>function($c,$h){ if(stripos($h,'x-ratelimit-reset:')===0)$GLOBALS['aa_adsb_reset']=(int)trim(substr($h,18)); return strlen($h); }]);
-      $raw=curl_exec($ch); $code=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); $cerr=curl_errno($ch); curl_close($ch);
-      return [$code,$raw,$cerr];
-    };
-    // First adsb.lol itself. It refuses the shared address of the hosting now and then (HTTP 429): then a minute of rest
-    // for adsb.lol, and meanwhile the same adsb.lol request through the own Koyeb service (/adsb, with the token).
-    // Only as a reserve: positions come from adsb.lol either way, never from the NDW traffic data.
-    $code=0; $raw=''; $cerr=0; $via='direct';
-    if(aaNow()>=(int)(aaKvGet('adsb_pauze_tot')??0)){
-      [$code,$raw,$cerr]=$haal('https://api.adsb.lol/v2/point/52.2/5.4/160',setting('ADSB_LOL_API_KEY')!==''?['api-auth: '.setting('ADSB_LOL_API_KEY')]:[]);
-      // adsb.lol allows 500 requests a day per address; out of them (429): rest until the reset (at most an hour).
-      if($code===429)aaKvSet('adsb_pauze_tot',(string)(aaNow()+60000*max(1,min(60,(int)ceil(aaAdsbReset()/60)))));
-    }
-    $bron='adsb.lol (ODbL)';
-    if($code!==200){
-      // Reserve: adsb.fi (same readsb data, "aircraft" instead of "ac"; "now" can be in seconds).
-      [$c2,$r2,$e2]=$haal('https://opendata.adsb.fi/api/v2/lat/52.2/lon/5.4/dist/160',[]);
-      $fi=$c2===200?json_decode((string)$r2,true):null;
-      if(is_array($fi)&&is_array($fi['ac']??$fi['aircraft']??null)){
-        $n=(float)($fi['now']??0); $raw=json_encode(['ac'=>$fi['ac']??$fi['aircraft'],'now'=>$n>0&&$n<1e11?(int)($n*1000):(int)$n]);
-        $code=200; $cerr=0; $via='adsb.fi'; $bron='adsb.fi';
-      }
-    }
-    if($code!==200&&setting('VERKEER_URL')!==''&&setting('VERKEER_TOKEN')!==''){
-      $direct=$code;
-      [$code,$raw,$cerr]=$haal(rtrim(setting('VERKEER_URL'),'/').'/adsb?lat=52.2&lon=5.4&nm=160',['Authorization: Bearer '.setting('VERKEER_TOKEN')]);
-      $via='koyeb';
-      if($code!==200)$code=$code?:$direct;
-    }
-    try{ aaKvSet('adsb_via',aaJson(['at'=>aaIso(aaNow()),'via'=>$via,'http'=>$code])); }catch(Throwable){}
-    if($code!==200)throw new RuntimeException('ADS-B HTTP '.$code.' via '.$via.($cerr?' curl '.$cerr:''));
-    $body=json_decode((string)$raw,true); if(!is_array($body)||!is_array($body['ac']??null))throw new RuntimeException('Invalid ADS-B payload');
+    // Several open sources in turn (aa/adsb-bronnen.php), so the map keeps working when one is out of requests.
+    require_once __DIR__.'/adsb-bronnen.php';
+    try{ $body=aaAdsbGebied(); $bron=$body['bron']; $via=$body['via']; $code=200; }
+    finally{ try{ aaKvSet('adsb_via',aaJson(['at'=>aaIso(aaNow()),'via'=>$via??'geen','http'=>$code??0])); }catch(Throwable){} }
     // The raw answer (readsb, ODbL) for GET /v1/adsb: the reserve of the old Worker when adsb.lol and adsb.fi refuse
     // its Cloudflare addresses. Only the fields it reads; positions only (no aircraft without one).
     try{ $ruw=[]; foreach($body['ac'] as $ac){ if(!is_array($ac)||(!isset($ac['lat'])&&!isset($ac['lastPosition'])))continue;
@@ -194,10 +163,9 @@ function aaHelikopters(): array {
     foreach($lucht as &$h){$h['boven']=$h['op_grond']?null:(aaPlaatsBij($h['lat'],$h['lon'])['tekst']??null);} unset($h);
     $data=['bijgewerkt'=>aaIso(aaNow()),'bron'=>$bron,'helikopters'=>$list,'lucht'=>$lucht]; $failing=false;
   }catch(Throwable $e){
-    if(str_contains($e->getMessage(),'HTTP 429'))try{aaKvSet('adsb_pauze_tot',(string)(aaNow()+60000));}catch(Throwable){}
     // Why it failed, for /docs and the checks (never a key in it): HTTP code or curl error number.
     try{ aaKvSet('adsb_fout',aaJson(['at'=>aaIso(aaNow()),'fout'=>substr($e->getMessage(),0,200)])); }catch(Throwable){}
-    $data=['bijgewerkt'=>aaIso(aaNow()),'bron'=>'adsb.lol (ODbL)','helikopters'=>[],'lucht'=>[],'fout'=>true,'verouderd'=>true]; $failing=true;
+    $data=['bijgewerkt'=>aaIso(aaNow()),'bron'=>'ADS-B','helikopters'=>[],'lucht'=>[],'fout'=>true,'verouderd'=>true]; $failing=true;
   }
   $n=aaNow(); $h=aaRetainAircraft($data['helikopters'],$snap['helikopters']??[],$n); $l=aaRetainAircraft($data['lucht'],$snap['lucht']??[],$n);
   $data['helikopters']=$h; $data['lucht']=$l;
