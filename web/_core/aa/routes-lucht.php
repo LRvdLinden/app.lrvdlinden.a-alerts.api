@@ -11,9 +11,11 @@ function aaRouteLucht(string $path): void {
   try{
     if($method==='GET'&&$path==='/v1/helikopters'){ require_once __DIR__.'/heli-lib.php'; aaReply(200,aaHelikoptersAntwoord(),['Cache-Control'=>'public, max-age=10']); }
     if($method==='GET'&&$path==='/v1/lucht'){ require_once __DIR__.'/heli-lib.php'; $a=aaLuchtAntwoord();
-      // ?bijzonder=1 (112Heli): also PH-UTL and PH-GOV, worldwide, from jet_posities. Never without the parameter.
-      if(($_GET['bijzonder']??'')==='1'){ require_once __DIR__.'/jet.php'; $j=aaJetToestellen(); $hex=array_column($j,'hex');
-        $a['toestellen']=array_merge(array_values(array_filter($a['toestellen'],fn($t)=>!in_array($t['hex']??'',$hex,true))),$j); }
+      // PH-GOV worldwide from jet_posities (replaces the Dutch-only record when newer); Max (PH-UTL) only with ?bijzonder=1 (112Heli).
+      try{ require_once __DIR__.'/jet.php'; $j=aaJetToestellen(($_GET['bijzonder']??'')==='1');
+        foreach($j as $jt){ $oud=null; foreach($a['toestellen'] as $i=>$t)if(($t['hex']??'')===$jt['hex']||($t['registratie']??'')===$jt['registratie'])$oud=$i;
+          if($oud===null)$a['toestellen'][]=$jt; elseif((aaMs($a['toestellen'][$oud]['gezien']??null)??0)<(aaMs($jt['gezien'])??0))$a['toestellen'][$oud]=$jt; }
+      }catch(Throwable $e){ error_log('[aa jet] '.$e->getMessage()); }
       aaReply(200,$a,['Cache-Control'=>'public, max-age=10']); }
     if($method==='GET'&&$path==='/v1/helikopters/status'){ require_once __DIR__.'/heli-lib.php'; aaReply(200,aaHeliStatusAntwoord(),['Cache-Control'=>'public, max-age=30']); }
     if($method==='GET'&&preg_match('#^/v1/helikopters/([a-z0-9-]{3,40})/spoor$#',$path,$m)){

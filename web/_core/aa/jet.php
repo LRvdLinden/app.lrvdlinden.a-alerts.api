@@ -59,13 +59,14 @@ function aaJetTick(): int {
 }
 
 /**
- * The jets as /v1/lucht aircraft, only for /v1/lucht?bijzonder=1 (112Heli). The A-Alerts apps and site never ask for it,
- * so Max is never on their map. Last known position of the past 10 minutes, worldwide; same fields as the other aircraft.
+ * The jets as /v1/lucht aircraft, worldwide, last known position of the past 10 minutes, same fields as the other aircraft.
+ * PH-GOV is always in /v1/lucht (also for A-Alerts itself); Max only with ?bijzonder=1 (112Heli), never on the A-Alerts map.
  */
-function aaJetToestellen(): array {
+function aaJetToestellen(bool $metBijzonder): array {
   $out = [];
   $q = aaDb()->prepare('SELECT * FROM jet_posities WHERE registratie = ? AND at >= ? ORDER BY at DESC LIMIT 1');
   foreach (AA_JETS as $jet) {
+    if ($jet['soort'] === 'bijzonder' && !$metBijzonder) continue;
     $q->execute([$jet['registratie'], aaNow() - 600000]); $r = $q->fetch(); if (!$r) continue;
     $out[] = ['id' => 'lucht-' . $r['hex'], 'soort' => $jet['soort'], 'icoon' => $jet['icoon'], 'naam' => $jet['naam'],
       'callsign' => $r['callsign'] ?: null, 'registratie' => $jet['registratie'], 'type' => $r['type'] ?: null, 'hex' => $r['hex'],
