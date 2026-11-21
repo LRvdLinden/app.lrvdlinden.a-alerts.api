@@ -156,7 +156,7 @@ function docsLiveState(): array {
   $pushAt=null; try{ $pushAt=(int)$db->query('SELECT MAX(bucket) FROM status_push')->fetchColumn()?:null; }catch(Throwable){}
   $out['bronnen'][]=['id'=>'push','naam'=>'Pushmeldingen (APNs, FCM)','icoon'=>'/images/website/aalerts-icon-180.png',
     'staat'=>$push?'live':(docsModule('push.php')?'uit':'gepland'),'laatst'=>$pushAt,
-    'detail'=>($pm==='1'?'Versturen staat aan voor alle toestellen.':($pm==='eigen'?"Testfase: versturen alleen naar toestellen die zich zelf bij deze API hebben aangemeld (nu $nEigen, de TestFlight-app). Alle andere toestellen krijgen hun meldingen nog van de Worker; de app meldt zich bij de Worker af, dus niets dubbel.":'Versturen staat uit: de Worker verstuurt nu, anders krijgt iedereen alles dubbel.')).' Sleutels '.(docsSet('APN_P8_CERT')&&docsSet('FCM_SERVICE_ACCOUNT')?'aanwezig':'nog niet compleet').'.'];
+    'detail'=>($pm==='1'?'Versturen staat aan voor alle toestellen.':($pm==='eigen'?"Versturen naar toestellen die zich zelf bij deze API hebben aangemeld (nu $nEigen): de Apple-apps vanaf 2.0.2 (build 106) en Android vanaf 2.0.2. Alle soorten: P2000, NL-Alert, Burgernet, KNMI, AMBER Alert, Vermist Kind Alert, VNOG en politienieuws. Oudere app-versies krijgen hun meldingen nog van de Worker; een nieuwe app meldt zich daar af, dus niets dubbel.":'Versturen staat uit: de Worker verstuurt nu, anders krijgt iedereen alles dubbel.')).' Sleutels '.(docsSet('APN_P8_CERT')&&docsSet('FCM_SERVICE_ACCOUNT')?'aanwezig':'nog niet compleet').'.'];
 
   $staat=function(string $id)use(&$out){ foreach($out['bronnen'] as $b)if($b['id']===$id)return $b['staat']; return null; };
   // --- building blocks of the migration
