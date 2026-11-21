@@ -67,7 +67,7 @@ function aaRouteApple(string $path): void {
     if($method==='GET'&&$path==='/v1/widget/ping')aaReply(200,aaWidgetPing($_GET),['Cache-Control'=>'no-store']);
     if($method==='POST'&&$path==='/v1/devices'){ aaRegisterDevice(aaJsonBody()); aaReply(200,['ok'=>true]); }
     $tok='([0-9a-f]{64,200}|fcm(?::|%3A)[A-Za-z0-9_:%-]{100,420})';
-    if($method==='DELETE'&&preg_match("#^/v1/devices/$tok$#i",$path,$m))aaReply(200,['ok'=>aaDeleteDevice(aaDeviceKey($m[1]))]);
+    if($method==='DELETE'&&preg_match("#^/v1/devices/$tok$#i",$path,$m))aaReply(200,['ok'=>aaDeleteDeviceRoute(aaDeviceKey($m[1]))]);
     if($method==='POST'&&preg_match("#^/v1/devices/$tok/test$#i",$path,$m)){
       $d=aaGetDevice(aaDeviceKey($m[1])); if(!$d)aaReply(404,['error'=>'Unknown device']);
       $nl=str_starts_with((string)(($d['language']??'')?:'nl'),'nl');

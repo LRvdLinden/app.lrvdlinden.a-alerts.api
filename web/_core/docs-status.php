@@ -88,9 +88,9 @@ function docsLiveState(): array {
   $d1=json_decode((string)docsKv($db,'aa_d1'),true); $d1=is_array($d1)?$d1:[];
   $d1Last=max(docsMsOf($d1['vol_bezig']??null)??0,...array_map(fn($v)=>docsMsOf((string)$v)??0,array_values(is_array($d1['klein']??null)?$d1['klein']:[0])));
   $out['bronnen'][]=['id'=>'d1','naam'=>'Overname Worker-database (D1, alleen lezen)','icoon'=>'/images/website/aalerts-icon-180.png',
-    'staat'=>!empty($d1['fout'])?'fout':(!empty($d1['vol_klaar'])?($d1Last&&$now-$d1Last<1200000?'overname':'fout'):($d1?'deels':'gepland')),'laatst'=>$d1Last?:null,
-    'detail'=>(!empty($d1['vol_klaar'])?'Volledige kopie klaar: '.docsAgo(docsMsOf($d1['vol_klaar'])).'. ':'Volledige kopie loopt nog. ')
-      .'Waarschuwingen elke 5 min, toestellen/nieuws/teksten elke 15 min tot de overstap.'.(!empty($d1['fout'])?' Fout: '.$d1['fout']:'')];
+    'staat'=>setting('WORKER_SPIEGEL')==='0'?'uit':(!empty($d1['fout'])?'fout':(!empty($d1['vol_klaar'])?($d1Last&&$now-$d1Last<1200000?'overname':'fout'):($d1?'deels':'gepland'))),'laatst'=>$d1Last?:null,
+    'detail'=>setting('WORKER_SPIEGEL')==='0'?'Klaar: sinds 21-11-2026 draait alles hier, de Worker geeft alleen nog door. De laatste kopie staat in de database.':((!empty($d1['vol_klaar'])?'Volledige kopie klaar: '.docsAgo(docsMsOf($d1['vol_klaar'])).'. ':'Volledige kopie loopt nog. ')
+      .'Waarschuwingen elke 5 min, toestellen/nieuws/teksten elke 15 min.'.(!empty($d1['fout'])?' Fout: '.$d1['fout']:''))];
 
   // --- Worker mirror
   // The database keeps local times: let it convert them, so the age is right in every time zone.
@@ -170,8 +170,8 @@ function docsLiveState(): array {
       'uitleg'=>$lucht?'Module staat op de server. Live zodra zowel de eigen vliegtuigdata als het eigen verkeer recent binnenkomen (zie hierboven).':'In aanbouw.'],
     ['naam'=>'Apple-diensten, toestellen, statistieken en beheer','staat'=>$staat('apple')==='live'?'live':($apple?'deels':'gepland'),
       'uitleg'=>$apple?'Module staat op de server. Live zodra de eigen motor zelf weer of routes heeft opgehaald.':'In aanbouw.'],
-    ['naam'=>'Pushmeldingen','staat'=>$push?'live':(docsModule('push.php')?'uit':'gepland'),'uitleg'=>'Pas aan bij de overstap.'],
-    ['naam'=>'Overstap van de apps en site naar api.a-alerts.nl','staat'=>'gepland','uitleg'=>'Alleen na uitdrukkelijke goedkeuring; de Worker blijft tot dan productie.'],
+    ['naam'=>'Pushmeldingen','staat'=>$push?'live':(docsModule('push.php')?'uit':'gepland'),'uitleg'=>'Alle pushmeldingen (P2000, waarschuwingen, nieuws, helikopters en beheer) gaan via deze server.'],
+    ['naam'=>'Overstap van de apps en site naar api.a-alerts.nl','staat'=>setting('PUSH_ACTIEF')==='1'?'live':'gepland','uitleg'=>'Sinds 21-11-2026: alles draait hier; de oude Worker geeft alleen verzoeken van oude appversies door.'],
   ];
   // --- settings present (names only)
   foreach(['P2000_PAGE_API_URL'=>'P2000.page','P2000_CODE'=>'Koyeb-aanmelding (website)','KOYEB_SUBPROTOCOL'=>'Koyeb-reserve (Homey)','VERKEER_URL'=>'Verkeer','ADSB_LOL_API_KEY'=>'adsb.lol','KNMI_WMS_KEY'=>'KNMI radar',

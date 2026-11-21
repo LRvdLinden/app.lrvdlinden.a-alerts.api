@@ -153,7 +153,7 @@ function docsRenderPage(array $routes,array $groups,array $selected,string $csrf
  echo '</nav></aside><main class="main"><div class="topbar"><div class="topbar-leading"><a href="#docs-nav" class="mobile-nav-link" aria-label="Ga naar endpointnavigatie">☰ <span>Endpoints</span></a><span><span class="status-dot"></span> API-v1 <span class="crumb">/ Documentatie</span></span></div>';
  echo '<form method="post" action="/docs/logout"><input type="hidden" name="csrf" value="'.docsSafe($csrf).'"><button class="logout">Uitloggen ↗</button></form></div>';
  echo '<div class="body-content"><p class="eyebrow">A-ALERTS / API REFERENCE</p><h1>Developer Documentation<span class="red-period">.</span></h1>';
- echo '<p class="intro">De eigen A-Alerts API op api.a-alerts.nl, los van Cloudflare. Hier zie je live wat er al zelfstandig draait, wat er binnenkomt en per route of hij in de eigen motor zit. De Worker op workers.dev blijft productie tot de overstap.</p>';
+ echo '<p class="intro">De eigen A-Alerts API op api.a-alerts.nl, los van Cloudflare. Hier zie je live wat er al zelfstandig draait, wat er binnenkomt en per route of hij in de eigen motor zit. Sinds 21 november 2026 is dit de enige server: de oude Worker op workers.dev geeft alleen nog verzoeken van oude appversies door naar hier.</p>';
  $inEngine=count(array_filter($routes,'docsRouteInEngine'));
  echo '<div class="overview-stats"><div><strong>'.count($routes).'</strong><span>Routes in totaal</span></div><div><strong>'.$inEngine.'</strong><span>In de eigen motor</span></div><div><strong>'.(count($routes)-$inEngine).'</strong><span>Nog te bouwen</span></div></div>';
  if($overview){docsRenderLiveStatus($routes);docsRenderOverview($sources);}
@@ -178,7 +178,7 @@ function docsRenderPage(array $routes,array $groups,array $selected,string $csrf
  $example=$selected['example']??['error'=>$selected['status']==='planned'?'feature_not_yet_available':'example_response','note'=>'Illustratief; contract nog niet gevalideerd'];
  echo '<section class="section"><h3>Voorbeeldresponse</h3><pre><code>'.docsSafe(json_encode($example,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)).'</code></pre></section>';
  echo '<section class="section"><h3>HTTP-responsen</h3><div class="response-list"><div><code>200</code> Geslaagd — indien geïmplementeerd en ingericht</div><div><code>401</code> Ontbrekend of ongeldig Bearer-token</div><div><code>403</code> Onvoldoende rechten</div><div><code>404</code> Record niet gevonden</div><div><code>503</code> Bron of onderdeel niet beschikbaar</div></div></section>';
- echo '<p class="disclaimer">“Eigen motor” betekent dat de route op deze server in PHP/MariaDB draait. Of het antwoord exact gelijk is aan workers.dev, controleert de vergelijkingsworkflow in GitHub. Een voorbeeldresponse is geen live-resultaat; gebruik daarvoor de live-viewer.</p>';
+ echo '<p class="disclaimer">“Eigen motor” betekent dat de route op deze server in PHP/MariaDB draait. Een voorbeeldresponse is geen live-resultaat; gebruik daarvoor de live-viewer.</p>';
  echo '</div><footer>© A-Alerts · Private Developer Portal · <a href="https://a-alerts.nl">a-alerts.nl</a></footer></main></div></body></html>';exit;
 }
 
@@ -244,7 +244,7 @@ function docsRenderOverview(array $sources):void {
   echo '</div></div></td><td>'.docsSafe((string)$item['role']).'</td><td class="source-status">'.docsSourceStatusHtml((string)$key,$item).'</td></tr>';
  }
  echo '</tbody></table></div>';
- echo '<p class="source-note">De Cloudflare Worker blijft productie tot de overstap; daarna draait alles via api.a-alerts.nl.</p></section>';
+ echo '<p class="source-note">Alles draait via api.a-alerts.nl; de Cloudflare Worker geeft alleen nog verzoeken van oude appversies door.</p></section>';
 }
 function docsRenderEndpointSources(array $endpoint,array $sources):void {
  $refs=docsSourceIds($endpoint);

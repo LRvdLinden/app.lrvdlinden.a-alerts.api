@@ -25,6 +25,18 @@ function aaDeviceRow(?array $d): ?array {
 }
 function aaActiveDevices(): array { return array_map('aaDeviceRow',aaDb()->query('SELECT * FROM devices WHERE enabled = 1'.(aaPushModus()==='eigen'?' AND eigen = 1':''))->fetchAll()); }
 function aaGetDevice(string $token): ?array { $q=aaDb()->prepare('SELECT * FROM devices WHERE token = ?'); $q->execute([$token]); return aaDeviceRow($q->fetch()?:null); }
+/** The request came in through the old Worker address (the Worker proxy adds this header). */
+function aaViaWorker(): bool { return ($_SERVER['HTTP_X_AALERTS_VIA_WORKER']??'')==='1'; }
+/**
+ * DELETE /v1/devices/{token} through the old Worker address: app 2.0.2+ registers here and then signs off "at the old
+ * server" once, which now arrives here too. That sign-off must not remove the registration it just made; an old app
+ * that registered through the Worker (or was copied from it) can still sign off.
+ */
+function aaDeleteDeviceRoute(string $token): bool {
+  if(aaViaWorker()){ $q=aaDb()->prepare('SELECT eigen, via_worker FROM devices WHERE token = ?'); $q->execute([$token]); $r=$q->fetch();
+    if($r&&(int)$r['eigen']===1&&(int)$r['via_worker']===0)return true; }
+  return aaDeleteDevice($token);
+}
 function aaDeleteDevice(string $token): bool {
   $q=aaDb()->prepare('DELETE FROM devices WHERE token = ?'); $q->execute([$token]); $n=$q->rowCount();
   aaDb()->prepare('DELETE FROM outbox WHERE token = ?')->execute([$token]); return $n>0;
@@ -51,12 +63,12 @@ function aaDeviceFrom(array $body): array {
 }
 function aaUpsertDevice(array $d): void {
   $now=aaNow();
-  aaDb()->prepare('INSERT INTO devices (token, platform, environment, language, app_version, enabled, plaatsen, diensten, prioriteiten, quiet, quiet_from, quiet_to, critical, radius_km, lat, lon, created_at, updated_at, eigen)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1) ON DUPLICATE KEY UPDATE eigen=1, platform=VALUES(platform), environment=VALUES(environment), language=VALUES(language), app_version=VALUES(app_version),
+  aaDb()->prepare('INSERT INTO devices (token, platform, environment, language, app_version, enabled, plaatsen, diensten, prioriteiten, quiet, quiet_from, quiet_to, critical, radius_km, lat, lon, created_at, updated_at, eigen, via_worker)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?) ON DUPLICATE KEY UPDATE eigen=1, via_worker=VALUES(via_worker), platform=VALUES(platform), environment=VALUES(environment), language=VALUES(language), app_version=VALUES(app_version),
     enabled=VALUES(enabled), plaatsen=VALUES(plaatsen), diensten=VALUES(diensten), prioriteiten=VALUES(prioriteiten), quiet=VALUES(quiet), quiet_from=VALUES(quiet_from), quiet_to=VALUES(quiet_to),
     critical=VALUES(critical), radius_km=VALUES(radius_km), lat=VALUES(lat), lon=VALUES(lon), updated_at=VALUES(updated_at)')
     ->execute([$d['token'],$d['platform'],$d['environment'],$d['language'],$d['app_version'],$d['enabled']?1:0,aaJson($d['plaatsen']),aaJson($d['diensten']),aaJson($d['prioriteiten']),
-      $d['quiet']?1:0,$d['quiet_from'],$d['quiet_to'],$d['critical']?1:0,$d['radius_km'],$d['lat'],$d['lon'],$now,$now]);
+      $d['quiet']?1:0,$d['quiet_from'],$d['quiet_to'],$d['critical']?1:0,$d['radius_km'],$d['lat'],$d['lon'],$now,$now,aaViaWorker()?1:0]);
 }
 
 // ------------------------------------------------------------------ preferences
