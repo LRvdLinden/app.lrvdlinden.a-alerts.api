@@ -67,9 +67,27 @@ function aaNorm(mixed $s): string { $s=Normalizer::normalize(mb_strtolower((stri
 function aaHasStreet(array $m): bool { return aaHasStreetLoc($m['locatie']??null); }
 function aaPlaats(array $m): string { return aaNorm($m['stad']??'')?:'apeldoorn'; }
 function aaLos(array $m): bool { return in_array(strtoupper((string)($m['prioriteit']??'')),['B1','B2','B3'],true)||preg_match('/herbezet|kazerneren|proefalarm/i',(string)($m['title']??''))===1; }
+/** incident.js nummers: the ride number ("Rit 356390") and the GMS number ("GMS 888026", or the six digits at the end of a police call or a contact request). */
+function aaNummers(array $m): array {
+  $t=(string)(($m['title']??'')?:($m['full_melding']??'')); $uit=[];
+  if(preg_match('/\bRit\s*:?\s*(\d{5,7})\b/i',$t,$r))$uit['rit']=(int)$r[1];
+  if(preg_match('/\bGMS\s*:?\s*(\d{5,7})\b/i',$t,$g))$uit['gms']=(int)$g[1];
+  elseif(!isset($uit['rit'])&&((($m['dienst']??null)==='politie')||preg_match('/\bcontact\s+(oc|meldkamer)\b/i',$t))&&preg_match('/\b(\d{6})\s*$/',$t,$g))$uit['gms']=(int)$g[1];
+  return $uit;
+}
+/** incident.js nummerScore: the same ride or GMS number within two hours; ride numbers 1 to 3 apart within 5 minutes for the same call in the same place. */
+function aaNummerScore(array $m, array $o): int {
+  $a=aaNummers($m); $b=aaNummers($o); $dt=abs($o['datum']-$m['datum']);
+  if($dt>120*60000)return 0;
+  if((!empty($a['rit'])&&$a['rit']===($b['rit']??null))||(!empty($a['gms'])&&$a['gms']===($b['gms']??null)))return 4;
+  if(!empty($a['rit'])&&!empty($b['rit'])&&abs($a['rit']-$b['rit'])<=3&&$dt<=5*60000&&aaPlaats($m)===aaPlaats($o)&&aaSoortAmbu($m)!==null&&aaSoortAmbu($m)===aaSoortAmbu($o))return 3;
+  return 0;
+}
 function aaScore(array $m, array $o): int {
+  if(aaLos($m)||aaLos($o))return 0;
+  $n=aaNummerScore($m,$o); if($n)return $n+(($o['dienst']??null)!==($m['dienst']??null)?1:0);
   $groot=($m['grip']??null)||($m['opschaling']??null)||($o['grip']??null)||($o['opschaling']??null);
-  if(abs($o['datum']-$m['datum'])>($groot?120:45)*60000||aaLos($m)||aaLos($o))return 0;
+  if(abs($o['datum']-$m['datum'])>($groot?120:45)*60000)return 0;
   $s=0;
   if(aaHasStreet($m)&&aaHasStreet($o)&&aaPlaats($m)===aaPlaats($o)&&aaNorm($m['locatie'])===aaNorm($o['locatie']))$s+=3;
   elseif(aaHasStreet($m)&&aaHasStreet($o)&&($m['lat']??null)!==null&&($o['lat']??null)!==null&&aaDistanceKm((float)$m['lat'],(float)$m['lon'],(float)$o['lat'],(float)$o['lon'])<=0.35)$s+=2;
