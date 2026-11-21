@@ -16,9 +16,29 @@ function aaLocatiesData(): array {
 /** admin.js contentFor: the text saved in the beheer, else the text that comes with the app. */
 function aaContentFor(string $name): mixed {
   $v=aaKvGet('content:'.$name);
-  if($v!==null)return json_decode($v,true);
-  if($name==='mededeling')return ['title'=>'','content'=>'','version'=>'','updated_at'=>''];
-  return aaData('content-'.$name);
+  $opgeslagen=$v!==null?json_decode($v,true):null;
+  if($name==='mededeling')return $opgeslagen??['title'=>'','content'=>'','version'=>'','updated_at'=>''];
+  $mee=aaData('content-'.$name);
+  if(!is_array($opgeslagen))return $mee;
+  // A text saved in the beheer wins, unless the text that comes with a newer release is newer: otherwise a new
+  // "Wat is nieuw" or help page never shows up once the beheer has saved that text once.
+  if($name==='changelog'){
+    if(!array_is_list($opgeslagen))return $mee;
+    $ids=[]; foreach($opgeslagen as $e)if(is_array($e))$ids[(string)($e['id']??'')]=true;
+    $alle=$opgeslagen; foreach($mee as $e)if(is_array($e)&&!isset($ids[(string)($e['id']??'')]))$alle[]=$e;
+    usort($alle,fn($a,$b)=>strcmp((string)($b['release_date']??''),(string)($a['release_date']??'')));
+    return $alle;
+  }
+  $dOpg=aaContentDatum($opgeslagen['updated_at']??$opgeslagen['version']??null); $dMee=aaContentDatum($mee['version']??null);
+  return $dMee!==null&&$dOpg!==null&&$dMee>$dOpg?$mee:$opgeslagen;
+}
+/** "2026-11-21", "6 november 2026" or an ISO time → "Y-m-d", else null. */
+function aaContentDatum(mixed $v): ?string {
+  $s=mb_strtolower(trim((string)($v??''))); if($s==='')return null;
+  if(preg_match('/^(\d{4})-(\d{2})-(\d{2})/',$s,$m))return "$m[1]-$m[2]-$m[3]";
+  $maanden=['januari'=>1,'februari'=>2,'maart'=>3,'april'=>4,'mei'=>5,'juni'=>6,'juli'=>7,'augustus'=>8,'september'=>9,'oktober'=>10,'november'=>11,'december'=>12];
+  if(preg_match('/^(\d{1,2})\s+([a-z]+)\s+(\d{4})$/u',$s,$m)&&isset($maanden[$m[2]]))return sprintf('%04d-%02d-%02d',$m[3],$maanden[$m[2]],$m[1]);
+  return null;
 }
 function aaAppInfo(): array {
   $n=fn($v)=>max(0,(int)$v);
