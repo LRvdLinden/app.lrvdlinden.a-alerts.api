@@ -13,3 +13,7 @@ jobs:
           curl -s --max-time 20 -o /dev/null -w "ADSB_RUNNER %{http_code}\n" https://api.adsb.lol/v2/point/52.2/5.4/160
           curl -s --max-time 20 -D - -o /tmp/adsb.txt https://api.adsb.lol/v2/point/52.2/5.4/160 | grep -iE "^HTTP|retry|ratelimit|x-|server|cf-" ; head -c 300 /tmp/adsb.txt; echo
           curl -s --max-time 20 -o /dev/null -w "ADSB_RUNNER_KLEIN %{http_code}\n" https://api.adsb.lol/v2/point/52.2/5.4/50
+          for u in https://opendata.adsb.fi/api/v2/lat/52.2/lon/5.4/dist/160 https://api.airplanes.live/v2/point/52.2/5.4/160; do
+            curl -s --max-time 20 -D /tmp/h.txt -o /tmp/b.txt "$u"; echo "== $u"; grep -iE "^HTTP|ratelimit|retry" /tmp/h.txt
+            python3 -c "import json;d=json.load(open('/tmp/b.txt'));print('keys',list(d)[:6],'n',len(d.get('ac') or d.get('aircraft') or []))" || head -c 200 /tmp/b.txt
+          done
