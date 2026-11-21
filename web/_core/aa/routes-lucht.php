@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Worker. Called from routes.php (aaRoute) before the other routes.
  */
 function aaRouteLucht(string $path): void {
-  if(!preg_match('#^/v1/(helikopters|lucht|verkeer|radar|kaart\.png)#',$path))return;
+  if(!preg_match('#^/v1/(helikopters|lucht|verkeer|radar|kaart\.png|weer/landelijk)#',$path))return;
   $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');
   if($method==='OPTIONS')aaReply(204,null);
   try{
