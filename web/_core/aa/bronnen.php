@@ -239,7 +239,7 @@ function aaIngestWarnings(): array {
   try{
     $v=aaBronJson(AA_SOURCES['knmi'].'/version'); $rev=(string)($v['revision']??'');
     $last=(string)(aaKvGet('knmi_revision')??''); [$lastRev,$lastAt]=array_pad(explode('@',$last),2,'0');
-    if($rev===''||"v3:$rev"!==$lastRev||aaNow()-(int)$lastAt>30*60000||AaProef::$aan){
+    if($rev===''||"v3:$rev"!==$lastRev||aaNow()-(int)$lastAt>30*60000||AaProef::$aan||aaKvGet('knmi_landelijk')===null){
       $d=aaBronJson(AA_SOURCES['knmi'].'.json'); $pagina=[];
       if(!empty($d['warning_events'])){ try{ $pagina=aaKnmiPagina(aaBronFetch('https://www.knmi.nl/nederland-nu/weer/waarschuwingen','text/html')); }catch(Throwable){} }
       $list=aaFromKnmi($d,$now,$pagina); $handle('knmi',$list); $ids=array_flip(array_map(fn($w)=>$w['id'],$list));
