@@ -14,6 +14,8 @@ $path = explode('?', $uri, 2)[0] ?: '/';
 // Parallel private API takes precedence on its explicit routes only.
 // Without a valid Bearer token, or before cPanel database setup, it fails closed.
 require_once __DIR__.'/_core/private-api.php';
+// Every /v1 answer may be read from a web page, also an error (404, 401): like the Worker.
+if (str_starts_with($path, '/v1/')) header('Access-Control-Allow-Origin: *');
 if (!getenv('AALERTS_UPSTREAM')) {
     require_once __DIR__.'/_core/docs.php';
     docsRoute($path);
