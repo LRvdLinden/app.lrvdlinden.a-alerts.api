@@ -170,6 +170,11 @@ function aaHelikopters(): array {
     try{ aaKvSet('adsb_via',aaJson(['at'=>aaIso(aaNow()),'via'=>$via,'http'=>$code])); }catch(Throwable){}
     if($code!==200)throw new RuntimeException('ADS-B HTTP '.$code.' via '.$via.($cerr?' curl '.$cerr:''));
     $body=json_decode((string)$raw,true); if(!is_array($body)||!is_array($body['ac']??null))throw new RuntimeException('Invalid ADS-B payload');
+    // The raw answer (readsb, ODbL) for GET /v1/adsb: the reserve of the old Worker when adsb.lol and adsb.fi refuse
+    // its Cloudflare addresses. Only the fields it reads; positions only (no aircraft without one).
+    try{ $ruw=[]; foreach($body['ac'] as $ac){ if(!is_array($ac)||(!isset($ac['lat'])&&!isset($ac['lastPosition'])))continue;
+        $ruw[]=array_intersect_key($ac,array_flip(['hex','type','flight','r','t','desc','ownOp','alt_baro','alt_geom','gs','track','true_heading','baro_rate','squawk','category','lat','lon','seen_pos','seen','lastPosition','dbFlags'])); }
+      aaKvSet('adsb_ruw',aaJson(['now'=>is_numeric($body['now']??null)&&(float)$body['now']>0?(int)$body['now']:aaNow(),'bron'=>$bron,'ac'=>$ruw])); }catch(Throwable){}
     $bnow=is_numeric($body['now']??null)&&(float)$body['now']>0?(int)$body['now']:aaNow();
     $learned=aaKvPrefix('heli_hex:');
     $list=aaFromAdsb($body['ac'],$bnow,$learned);
