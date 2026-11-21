@@ -139,10 +139,11 @@ function docsLiveState(): array {
     'detail'=>$viaTekst.'adsb.lol weigert het gedeelde adres van de hosting regelmatig (HTTP 429); dan vraagt de server een minuut niet rechtstreeks en komt dezelfde adsb.lol-data via de eigen Koyeb-dienst. Laatste vastgelegde positie: '.docsAgo($heliPos?:null).'.'
       .(is_array($fout)&&$foutAt&&(!$viaOk||$foutAt>($viaAt??0))?' Laatste fout: '.(string)($fout['fout']??'').' ('.docsAgo($foutAt).').':'')];
   // --- traffic
-  $vk=docsKvAt($db,'verkeer'); $nd=$run('ndw');
+  $vk=docsKvAt($db,'verkeer');
   $out['bronnen'][]=['id'=>'verkeer','naam'=>'Verkeer (NDW, flitsers, werkzaamheden)','icoon'=>'/images/website/verkeer_file.png',
     'staat'=>!docsSet('VERKEER_URL')?'gepland':($vk&&$now-$vk<900000&&docsModule('routes-lucht.php')?'live':(docsModule('routes-lucht.php')?'deels':'gepland')),'laatst'=>docsModule('routes-lucht.php')?$vk:null,
-    'detail'=>(docsSet('VERKEER_URL')?'Bron ingesteld. ':'Bron nog niet ingesteld. ').($nd?'Testcollector: '.($nd['ok']?'ok':'fout').', '.docsAgo($nd['at']).'.':'')];
+    'detail'=>(docsSet('VERKEER_URL')?'Eigen cron (elke minuut) haalt de verkeerslijst op bij de eigen Koyeb-dienst (NDW open data en vaste flitsers). ':'Bron nog niet ingesteld. ')
+      .'Laatst bijgewerkt: '.docsAgo($vk).'; NDW laatst gelezen: '.docsAgo(docsMsOf(docsKv($db,'verkeer_vers'))).'.'];
   // --- Apple services and push
   $apple=docsModule('routes-apple.php');
   $wAt=$aa?(int)(docsScalar($db,'SELECT MAX(fetched_at) FROM weather')??0):0; $rAt=$aa?(int)(docsScalar($db,'SELECT MAX(at) FROM melding_routes')??0):0;
