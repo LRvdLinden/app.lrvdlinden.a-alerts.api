@@ -66,7 +66,9 @@ function aaPrefsFrom(mixed $s): ?array {
   $knmi=is_array($s['knmi']??null)?array_values(array_unique(array_filter(array_map('aaNormLevel',$s['knmi']),fn($l)=>$l!=='green'))):[];
   return ['nlalert'=>($s['nlalert']??null)!==false,'burgernet'=>($s['burgernet']??null)===true,'knmi'=>$knmi,'amber'=>($s['amber']??null)===true,'vermistkind'=>($s['vermistkind']??null)===true,
     'vnog'=>($s['vnog']??null)===true,'nieuwsLiveblog'=>($s['nieuwsLiveblog']??null)===true,'nieuwsPolitie'=>($s['nieuwsPolitie']??null)===true,'nieuwsRegio'=>($s['nieuwsRegio']??null)===true,
-    'knmiVooraf'=>($s['knmiVooraf']??null)!==false,'knmiOpgeheven'=>($s['knmiOpgeheven']??null)!==false];
+    'knmiVooraf'=>($s['knmiVooraf']??null)!==false,'knmiOpgeheven'=>($s['knmiOpgeheven']??null)!==false,
+    // App 2.0.2+: hide "Graag contact meldkamer" and test calls everywhere, also as push (default off).
+    'verbergContact'=>($s['verbergContact']??null)===true,'verbergTest'=>($s['verbergTest']??null)===true];
 }
 function aaProfielenFrom(mixed $list): ?array {
   if(!is_array($list)||!array_is_list($list))return null;
@@ -150,7 +152,17 @@ function aaVolgtCapcode(?array $prefs, array $m): bool {
   foreach($codes as $c){ $c=preg_replace('/\D/','',(string)($c??'')); if($c!==''&&in_array($c,$v,true))return true; }
   return false;
 }
+/** rules.js isContactMeldkamer / isTestOproep: same rules as the apps. */
+function aaIsContactMeldkamer(array $m): bool {
+  if(($m['categorie']??null)==='Graag contact meldkamer')return true;
+  return (bool)preg_match('/\\bcontact\\b.{0,25}\\b(oc|meldkamer|mka|mkb|mkp|mk|gms|mka\\s*nog)\\b|\\b(graag|svp|s\\.v\\.p\\.?|verzoeke?)\\b.{0,12}\\b(opnieuw\\s+)?contact\\b/iu',(string)(($m['full_melding']??'')?:($m['title']??'')));
+}
+function aaIsTestOproep(array $m): bool {
+  return (bool)preg_match('/\\btest(oproep|bericht|melding|alarm|page|paging)?\\b|\\bproef(alarm|oproep)\\b/iu',(string)(($m['full_melding']??'')?:($m['title']??'')));
+}
 function aaMeldingWanted(array $d, ?array $prefs, array $m, ?int $ms=null): bool {
+  // Hidden kinds ("Graag contact meldkamer", test calls): never a push, also not for a followed capcode.
+  if((!empty($prefs['verbergContact'])&&aaIsContactMeldkamer($m))||(!empty($prefs['verbergTest'])&&aaIsTestOproep($m)))return false;
   if(!empty($d['enabled'])&&aaVolgtCapcode($prefs,$m)&&!(aaIsQuiet($d,$ms)&&!(!empty($d['critical'])&&aaIsUrgent($m))))return true;
   $prof=$prefs['profielen']??null;
   if(!is_array($prof)||!$prof)return aaMatches($d,$m,$ms);
