@@ -1,0 +1,31 @@
+name: Controle beheer (api.a-alerts.nl)
+on: workflow_dispatch
+permissions: { contents: read }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inloggen en de beheer-routes lezen (geen wijzigingen, geen geheimen in de log)
+        env:
+          BEHEER_USER: ${{ secrets.BEHEER_USER }}
+          BEHEER_PASSWORD: ${{ secrets.BEHEER_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          A="https://api.a-alerts.nl"; W="https://p2000-apeldoorn-api.lrvdlinden.workers.dev"
+          def call(base, method, path, body=None, tok=None):
+              req=urllib.request.Request(base+path, method=method, data=json.dumps(body).encode() if body is not None else None,
+                  headers={"Content-Type":"application/json","User-Agent":"A-Alerts-check/1.0",**({"Authorization":"Bearer "+tok} if tok else {})})
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r: return r.status, json.loads(r.read() or b"null")
+              except urllib.error.HTTPError as e: return e.code, None
+          c,b=call(A,"POST","/v1/beheer/login",{"user":os.environ["BEHEER_USER"],"password":os.environ["BEHEER_PASSWORD"]})
+          print("LOGIN api", c); tok=(b or {}).get("token")
+          if not tok: raise SystemExit("geen sessie")
+          print("TOKEN geldig op Worker", call(W,"GET","/v1/beheer/me",tok=tok)[0])
+          for p in ["/v1/beheer/me","/v1/beheer/overview","/v1/beheer/meldingen?limit=5","/v1/beheer/waarschuwingen","/v1/beheer/nieuws?limit=5",
+                    "/v1/beheer/nieuws/stock","/v1/beheer/push","/v1/beheer/feedback","/v1/beheer/status","/v1/beheer/widgets","/v1/beheer/downloads"]:
+              ca,ba=call(A,"GET",p,tok=tok); cw,bw=call(W,"GET",p,tok=tok)
+              ka=sorted(ba.keys()) if isinstance(ba,dict) else type(ba).__name__; kw=sorted(bw.keys()) if isinstance(bw,dict) else type(bw).__name__
+              print("GET", p, "api", ca, "worker", cw, "zelfde velden" if ka==kw else f"VELDEN api={ka} worker={kw}")
+          PY

@@ -81,6 +81,9 @@ function aaRouteApple(string $path): void {
     if($method==='POST'&&$path==='/v1/beheer/login')aaReply(200,aaLogin(aaJsonBody()));
     if($method==='GET'&&$path==='/v1/beheer/ping')aaReply(200,['configured'=>aaBeheerConfigured()]);
     $admin=aaRequireAdmin();
+    // Until the switch, the old apps still read from the Worker. So every beheer change made here also goes to the
+    // Worker (same login, same token), so old and new apps show the same. Off with WORKER_SPIEGEL=0.
+    if($method!=='GET'&&$method!=='HEAD'&&$method!=='OPTIONS')aaBeheerDoorsturen($method,$path);
     if($method==='GET'&&$path==='/v1/beheer/me')aaReply(200,['user'=>$admin['u']??null,'expires'=>aaIso((int)$admin['exp'])]);
     if($method==='GET'&&$path==='/v1/beheer/overview')aaReply(200,aaOverview(aaStatusInfo())+['aAlerts'=>aaAlertsOverview(),'android'=>aaDownloadStats()]);
     if($method==='GET'&&$path==='/v1/beheer/widgets')aaReply(200,['sites'=>aaWidgetSites()]);
@@ -140,3 +143,19 @@ function aaRouteApple(string $path): void {
     aaReply(500,['error'=>'Server error']);
   }
 }
+
+/** Sends the same beheer change to the Worker (best effort, never blocks the change here). */
+function aaBeheerDoorsturen(string $method, string $path): void {
+  // A test push to the beheer phones is sent here only (else it arrives twice).
+  if(setting('WORKER_SPIEGEL')==='0'||$path==='/v1/beheer/devices/test')return;
+  $worker=rtrim(setting('REFERENCE_WORKER_URL')?:'https://p2000-apeldoorn-api.lrvdlinden.workers.dev','/');
+  $auth=(string)($_SERVER['HTTP_AUTHORIZATION']??($_SERVER['REDIRECT_HTTP_AUTHORIZATION']??''));
+  $q=(string)($_SERVER['QUERY_STRING']??'');
+  $ch=curl_init($worker.$path.($q!==''?'?'.$q:''));
+  curl_setopt_array($ch,[CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_POSTFIELDS=>(string)file_get_contents('php://input'),CURLOPT_RETURNTRANSFER=>true,
+    CURLOPT_TIMEOUT=>15,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_HTTPHEADER=>['Authorization: '.$auth,'Content-Type: '.((string)($_SERVER['CONTENT_TYPE']??'application/json')),'User-Agent: A-Alerts-API/1.0 (beheer)']]);
+  $raw=curl_exec($ch); $code=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
+  try{ aaKvSet('beheer_doorsturen',aaJson(['at'=>aaIso(aaNow()),'methode'=>$method,'pad'=>$path,'http'=>$code])); }catch(Throwable){}
+  if($code<200||$code>=300)error_log('[aa beheer doorsturen] '.$method.' '.$path.' HTTP '.$code);
+}
+
