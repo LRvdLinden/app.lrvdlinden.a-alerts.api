@@ -108,7 +108,10 @@ while(microtime(true)<$until){
       $berichten++;
       // Health no more than twice per minute, as in the Worker.
       if(microtime(true)-$hbAt>30){$hb=false;$hbAt=microtime(true);}
-      try{ $n+=aaKoyebMessage($text,$hb); }catch(Throwable $e){ error_log('[aa koyeb ingest] '.$e->getMessage()); }
+      try{ $voor=$n; $n+=aaKoyebMessage($text,$hb);
+        // A new alert: straight on to the Homeys (only when HOMEY_VIA_API is on, see homey.php).
+        if($n>$voor){ require_once __DIR__.'/homey.php'; aaNotifyHomey(); }
+      }catch(Throwable $e){ error_log('[aa koyeb ingest] '.$e->getMessage()); }
     }
     $ws->close();
   }catch(Throwable $e){
@@ -116,5 +119,6 @@ while(microtime(true)<$until){
     if(microtime(true)+5<$until)sleep(5); else break;
   }
 }
+try{ require_once __DIR__.'/homey.php'; aaNotifyHomey(); }catch(Throwable $e){ error_log('[aa homey] '.$e->getMessage()); }
 aaKvSet('koyeb_run',aaJson(['at'=>aaNow(),'berichten'=>$berichten,'nieuw'=>$n,'duur_s'=>round(microtime(true)-$start,1)]));
 echo "koyeb berichten=$berichten nieuw=$n\n";
