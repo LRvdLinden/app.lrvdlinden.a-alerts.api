@@ -11,9 +11,9 @@ const AA_STATUS_GROEPEN=[
   ['id'=>'meldingen','naam'=>'Meldingen','naam_en'=>'Alerts','onderdelen'=>[['id'=>'p2000','naam'=>'P2000-meldingen','naam_en'=>'P2000 alerts'],['id'=>'nlalert','naam'=>'NL-Alert','naam_en'=>'NL-Alert'],
     ['id'=>'burgernet','naam'=>'Burgernet','naam_en'=>'Burgernet'],['id'=>'knmi','naam'=>'KNMI-waarschuwingen','naam_en'=>'KNMI warnings'],
     ['id'=>'kind','naam'=>'AMBER Alert en Vermist Kind Alert','naam_en'=>'AMBER Alert and Missing Child Alert'],['id'=>'vnog','naam'=>'VNOG-incidenten','naam_en'=>'VNOG incidents']]],
-  ['id'=>'push','naam'=>'Pushmeldingen','naam_en'=>'Push notifications','onderdelen'=>[['id'=>'push_apple','naam'=>'iPhone, iPad, Mac en Watch','naam_en'=>'iPhone, iPad, Mac and Watch'],['id'=>'push_android','naam'=>'Android','naam_en'=>'Android']]],
+  ['id'=>'push','naam'=>'Pushmeldingen','naam_en'=>'Push notifications','onderdelen'=>[['id'=>'push_apple','naam'=>'iPhone, iPad, Mac en Watch','naam_en'=>'iPhone, iPad, Mac and Watch'],['id'=>'push_android','naam'=>'Android','naam_en'=>'Android'],['id'=>'homey','naam'=>'Homey-app','naam_en'=>'Homey app']]],
   ['id'=>'live','naam'=>'Live data','naam_en'=>'Live data','onderdelen'=>[['id'=>'heli','naam'=>'Helikopters','naam_en'=>'Helicopters'],['id'=>'weer','naam'=>'Weer','naam_en'=>'Weather'],['id'=>'verkeer','naam'=>'Verkeer (NDW)','naam_en'=>'Traffic (NDW)']]],
-  ['id'=>'apps','naam'=>'Apps en website','naam_en'=>'Apps and website','onderdelen'=>[['id'=>'api','naam'=>'Server (API)','naam_en'=>'Server (API)'],['id'=>'web','naam'=>'Website en live pager','naam_en'=>'Website and live pager']]],
+  ['id'=>'apps','naam'=>'Server, apps en website','naam_en'=>'Server, apps and website','onderdelen'=>[['id'=>'api','naam'=>'Server (api.a-alerts.nl)','naam_en'=>'Server (api.a-alerts.nl)'],['id'=>'database','naam'=>'Database (MySQL)','naam_en'=>'Database (MySQL)'],['id'=>'web','naam'=>'Website en live pager','naam_en'=>'Website and live pager']]],
 ];
 const AA_STATUS_RANG=['ok'=>0,'maint'=>1,'warn'=>2,'down'=>3];
 function aaOnderdelen(): array { $o=[]; foreach(AA_STATUS_GROEPEN as $g)foreach($g['onderdelen'] as $x)$o[]=$x; return $o; }
@@ -30,12 +30,12 @@ function aaOpLeeftijd(int $okAt, mixed $fout, int $now, int $warn, int $down): a
 }
 function aaP2000Staat(int $primary, int $backup, mixed $err, int $now): array {
   $newest=max($primary,$backup);
-  if(!$newest)return ['staat'=>'down','detail'=>'Geen P2000-gegevens van p2000.page of Koyeb','detail_en'=>'No P2000 data from p2000.page or Koyeb','fout'=>$err];
+  if(!$newest)return ['staat'=>'down','detail'=>'Geen P2000-gegevens van de Koyeb-stream','detail_en'=>'No P2000 data from the Koyeb stream','fout'=>$err];
   $age=$now-$newest; $okP=$primary>0&&$now-$primary<=3*AA_MIN; $okB=$backup>0&&$now-$backup<=3*AA_MIN;
   if($okP||$okB){ $via=$okP&&$okB?'p2000.page en Koyeb':($okP?'p2000.page':'Koyeb'); $viaEn=$okP&&$okB?'p2000.page and Koyeb':$via;
     return ['staat'=>'ok','detail'=>"P2000 actief via $via · laatste ontvangst ".aaAgo($age).' geleden','detail_en'=>"P2000 active via $viaEn · last received ".aaAgoEn($age).' ago']; }
-  return ['staat'=>$age>10*AA_MIN?'down':'warn','detail'=>'Beide P2000-bronnen leveren geen recente gegevens (sinds '.aaTijdNL($newest).')',
-    'detail_en'=>'Neither P2000 source has delivered recent data (since '.aaTijdNL($newest).')','fout'=>$err?:null];
+  return ['staat'=>$age>10*AA_MIN?'down':'warn','detail'=>'De P2000-stream levert geen recente gegevens (sinds '.aaTijdNL($newest).')',
+    'detail_en'=>'The P2000 stream has not delivered recent data (since '.aaTijdNL($newest).')','fout'=>$err?:null];
 }
 function aaPushStaat(string $platform, int $now): array {
   $q=aaDb()->prepare('SELECT SUM(ok) AS ok, SUM(fail) AS fail, SUM(lat_sum) AS ls, SUM(lat_n) AS ln FROM status_push WHERE platform = ? AND bucket >= ?'); $q->execute([$platform,$now-30*AA_MIN]); $r=$q->fetch();
@@ -70,7 +70,8 @@ function aaHuidigeStaat(int $now): array {
     'status_heli_ok','status_heli_fout','status_weer_ok','status_weer_fout','status_web_ok','status_web_fout','cron_run'];
   $q=aaDb()->prepare('SELECT `key`, value FROM kv WHERE `key` IN ('.implode(',',array_fill(0,count($keys),'?')).')'); $q->execute($keys);
   $kv=[]; foreach($q as $r)$kv[$r['key']]=$r['value']; $n=fn($k)=>(int)(is_numeric($kv[$k]??null)?$kv[$k]:0);
-  $s=['p2000'=>aaP2000Staat($n('feed_ok'),$n('koyeb_last_message'),$kv['feed_error']??null,$now)];
+  // P2000 comes only through the Koyeb stream now; p2000.page is no longer read (it refuses us with HTTP 403).
+  $s=['p2000'=>aaP2000Staat(0,$n('koyeb_last_message'),null,$now)];
   foreach(['nlalert','burgernet','knmi','kind','vnog'] as $b)$s[$b]=aaOpLeeftijd($n("bron_ok:$b"),$kv["bron_fout:$b"]??null,$now,10*AA_MIN,30*AA_MIN);
   $s['verkeer']=setting('VERKEER_URL')!==''?aaOpLeeftijd($n('bron_ok:verkeer'),$kv['bron_fout:verkeer']??null,$now,10*AA_MIN,30*AA_MIN):['staat'=>'ok','detail'=>null,'detail_en'=>null,'onbekend'=>true];
   $s['heli']=aaOpLeeftijd($n('status_heli_ok'),null,$now,5*AA_MIN,15*AA_MIN);
@@ -78,7 +79,18 @@ function aaHuidigeStaat(int $now): array {
   $s['push_apple']=aaPushStaat('apple',$now); $s['push_android']=aaPushStaat('android',$now);
   $wo=$n('status_weer_ok'); $wf=$n('status_weer_fout');
   $s['weer']=$wf>$wo&&$now-$wf<30*AA_MIN?['staat'=>'warn','detail'=>'Weer kon niet worden geladen','detail_en'=>'Weather could not be loaded']:['staat'=>'ok','detail'=>null,'detail_en'=>null];
-  $s['api']=$now-$n('cron_run')>5*AA_MIN?['staat'=>'warn','detail'=>'Achtergrondtaken lopen achter','detail_en'=>'Background tasks are behind']:['staat'=>'ok','detail'=>null,'detail_en'=>null];
+  // Server: the own background tasks (P2000 stream, sources) must have run in the last minutes.
+  $kr=aaParse(aaKvGet('koyeb_run'),null); $br=aaParse(aaKvGet('aa_bronnen'),null);
+  $taak=max((int)($kr['at']??0),(int)($br['at_ms']??0));
+  $s['api']=!$taak?['staat'=>'ok','detail'=>null,'detail_en'=>null,'onbekend'=>true]:($now-$taak>15*AA_MIN?['staat'=>'down','detail'=>'Achtergrondtaken staan stil sinds '.aaTijdNL($taak),'detail_en'=>'Background tasks stopped at '.aaTijdNL($taak)]
+    :($now-$taak>5*AA_MIN?['staat'=>'warn','detail'=>'Achtergrondtaken lopen achter','detail_en'=>'Background tasks are behind']:['staat'=>'ok','detail'=>'Achtergrondtaken '.aaAgo($now-$taak).' geleden','detail_en'=>'Background tasks '.aaAgoEn($now-$taak).' ago']));
+  // Database: a small query; slow (> 1 s) is a warning. Reaching this line means it answers.
+  $t0=microtime(true); aaDb()->query('SELECT 1')->fetchColumn(); $ms=(int)round((microtime(true)-$t0)*1000);
+  $s['database']=$ms>1000?['staat'=>'warn','detail'=>"Database reageert traag ($ms ms)",'detail_en'=>"Database is slow ($ms ms)"]:['staat'=>'ok','detail'=>null,'detail_en'=>null];
+  // Homey app: the webhooks of api.a-alerts.nl (only when they go out from here).
+  $hl=aaParse(aaKvGet('homey_last'),null);
+  $s['homey']=setting('HOMEY_VIA_API')!=='1'||!is_array($hl)?['staat'=>'ok','detail'=>null,'detail_en'=>null,'onbekend'=>true]
+    :(!empty($hl['ok'])?['staat'=>'ok','detail'=>null,'detail_en'=>null]:['staat'=>$now-(int)($hl['at']??0)<30*AA_MIN?'warn':'ok','detail'=>'Homey-webhook gaf HTTP '.(int)($hl['status']??0),'detail_en'=>'Homey webhook returned HTTP '.(int)($hl['status']??0)]);
   $wfj=aaParse($kv['status_web_fout']??null,null);
   $s['web']=is_array($wfj)&&($wfj['at']??0)>$n('status_web_ok')?['staat'=>'down','detail'=>'Website niet bereikbaar','detail_en'=>'Website unreachable','fout'=>$wfj['fout']??null]:['staat'=>'ok','detail'=>null,'detail_en'=>null,'onbekend'=>!$n('status_web_ok')];
   foreach(aaActieveIncidenten($now) as $inc){ if($inc['soort']!=='onderhoud')continue; foreach($inc['onderdelen'] as $id)if(isset($s[$id])&&$s[$id]['staat']!=='down')$s[$id]['staat']='maint'; }

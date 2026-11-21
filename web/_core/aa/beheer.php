@@ -97,9 +97,11 @@ function aaDownloadStats(): array {
 
 // ------------------------------------------------------------------ overview
 function aaStatusInfo(): array {
-  $ok=aaKvGet('feed_ok'); $cron=aaKvGet('cron_run');
+  // P2000 comes only through the Koyeb stream (p2000.page refuses us with HTTP 403 and is no longer read).
+  $ok=aaKvGet('koyeb_last_message'); $err=aaKvGet('koyeb_last_error'); $errT=aaKvGet('koyeb_last_error_text');
+  $kr=aaParse(aaKvGet('koyeb_run'),null); $br=aaParse(aaKvGet('aa_bronnen'),null); $cron=max((int)($kr['at']??0),(int)($br['at_ms']??0));
   require_once __DIR__.'/status.php';
-  return ['feed'=>['lastOk'=>$ok?aaIso((int)$ok):null,'lastError'=>aaKvGet('feed_error')],'cron'=>$cron?aaIso((int)$cron):null,
+  return ['feed'=>['lastOk'=>$ok?aaIso((int)$ok):null,'lastError'=>$err&&(!$ok||(int)$err>(int)$ok)&&aaNow()-(int)$err<10*60000?('Koyeb: '.($errT?:'fout')):null,'bron'=>'Koyeb'],'cron'=>$cron?aaIso($cron):null,
     'apns'=>aaApnsConfigured(),'fcm'=>aaFcmConfigured(),'homey'=>setting('HOMEY_WEBHOOK_ID')!=='','weatherkit'=>aaWeatherConfigured(),'mapkit'=>aaMapkitConfigured(),
     'mapsServer'=>aaMapsServerConfigured(),'radar'=>setting('KNMI_WMS_KEY')!=='','meldingenInDatabase'=>aaBhCount('SELECT COUNT(*) FROM meldingen'),
     'outbox'=>aaBhCount('SELECT COUNT(*) FROM outbox'),'beheerApparaten'=>aaBhCount('SELECT COUNT(*) FROM admin_devices')];
@@ -442,3 +444,27 @@ function aaPushNieuws(string $id, string $kind, int $updateId=0): int {
   if($tok)aaQueue("n:$kind:$id:$updateId",$tok);
   return count($tok);
 }
+
+// ------------------------------------------------------------------ bronnen (sources overview for the beheer)
+/**
+ * Every source of api.a-alerts.nl with its state and last read (the same list as /docs), plus for P2000 how complete the
+ * alerts of the last 24 hours are: share with capcode, priority, service, place, region, street, GRIP/opschaling and spot.
+ */
+function aaBeheerBronnen(): array {
+  require_once dirname(__DIR__).'/docs-status.php';
+  $live=docsLiveState();
+  $rows=aaBhRows('SELECT capcode, prioriteit, dienst, stad, regio, locatie, grip, opschaling, lat, bron FROM meldingen WHERE datum > ?',[aaNow()-86400000]);
+  $n=count($rows); $pct=fn(callable $f)=>$n?(int)round(100*count(array_filter($rows,$f))/$n):0;
+  $vol=fn($v)=>$v!==null&&trim((string)$v)!==''&&strtolower(trim((string)$v))!=='onbekend';
+  $dekking=['meldingen'=>$n,'capcodes'=>$pct(fn($r)=>$vol($r['capcode'])),'prioriteit'=>$pct(fn($r)=>$vol($r['prioriteit'])),
+    'dienst'=>$pct(fn($r)=>$vol($r['dienst'])),'plaats'=>$pct(fn($r)=>$vol($r['stad'])),'regio'=>$pct(fn($r)=>$vol($r['regio'])),
+    'straat'=>$pct(fn($r)=>$vol($r['locatie'])),'opschaling'=>$pct(fn($r)=>$vol($r['grip'])||$vol($r['opschaling'])),'locatie'=>$pct(fn($r)=>$r['lat']!==null)];
+  $perBron=[]; foreach($rows as $r){ $b=(string)($r['bron']?:'onbekend'); $perBron[$b]=($perBron[$b]??0)+1; }
+  $uur=[]; foreach(aaBhRows('SELECT datum FROM meldingen WHERE datum > ?',[aaNow()-86400000]) as $r){ $h=(int)floor((aaNow()-(int)$r['datum'])/3600000); $uur[$h]=($uur[$h]??0)+1; }
+  $perUur=[]; for($h=23;$h>=0;$h--)$perUur[]=$uur[$h]??0;
+  return ['bijgewerkt'=>aaIso(aaNow()),'p2000'=>['bron'=>'Koyeb-stream','dekking'=>$dekking,'perBron'=>$perBron,'perUur'=>$perUur],
+    'bronnen'=>array_map(fn($b)=>['id'=>$b['id'],'naam'=>$b['naam'],'staat'=>$b['staat'],'laatst'=>isset($b['laatst'])&&$b['laatst']?aaIso((int)$b['laatst']):null,'detail'=>$b['detail']??null],
+      array_values(array_filter($live['bronnen'],fn($b)=>!in_array($b['id'],['p2000page','spiegel'],true)))),
+    'database'=>$live['db'],'tabellen'=>$live['tabellen']];
+}
+

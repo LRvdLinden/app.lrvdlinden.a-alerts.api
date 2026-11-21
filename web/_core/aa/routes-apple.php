@@ -127,6 +127,7 @@ function aaRouteApple(string $path): void {
       if($method==='PUT')aaReply(200,aaSaveContent($m[1],json_decode((string)file_get_contents('php://input'),true)));
       if($method==='DELETE'){ aaDb()->prepare('DELETE FROM kv WHERE `key` = ?')->execute(['content:'.$m[1]]); aaReply(200,aaContentFor($m[1])); }
     }
+    if($method==='GET'&&$path==='/v1/beheer/bronnen')aaReply(200,aaBeheerBronnen());
     if($method==='GET'&&$path==='/v1/beheer/status')aaReply(200,aaStatusOverzicht(true));
     if($method==='POST'&&$path==='/v1/beheer/status/incidenten')aaReply(200,aaMaakIncident(aaJsonBody()));
     if(preg_match('#^/v1/beheer/status/incidenten/(\d+)$#',$path,$m)){
