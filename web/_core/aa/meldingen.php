@@ -276,6 +276,11 @@ function aaIngestParsed(array $parsed, int $budget=45): array {
   if($fresh){ try{ aaKenToe($fresh,array_values(array_filter(aaRecenteVoorIncident(),fn($r)=>!empty($r['incident'])))); }catch(Throwable){ foreach($fresh as &$m)$m['incident']??=$m['guid']; unset($m);} }
   $added=[]; foreach($fresh as $m)if(aaInsertMelding($m))$added[]=$m;
   if($added){ try{aaNoteerPosten($added);}catch(Throwable $e){error_log('[aa posten] '.$e->getMessage());} }
+  // Pushes for new, recent alerts (oldest first), as the Worker; sent at once when PUSH_ACTIEF allows it.
+  $recent=array_values(array_filter($added,fn($m)=>aaNow()-$m['datum']<15*60000)); usort($recent,fn($a,$b)=>$a['datum']<=>$b['datum']);
+  if($recent&&in_array(setting('PUSH_ACTIEF'),['1','eigen'],true)&&is_file(__DIR__.'/push.php')){
+    try{ require_once __DIR__.'/push.php'; foreach($recent as $m)aaQueueMelding($m); aaDrain(); }catch(Throwable $e){ error_log('[aa push] '.$e->getMessage()); }
+  }
   $last=(int)(aaKvGet('aa_herstel_at')??0);
   if($added||aaNow()-$last>15*60000){
     aaKvSet('aa_herstel_at',(string)aaNow());

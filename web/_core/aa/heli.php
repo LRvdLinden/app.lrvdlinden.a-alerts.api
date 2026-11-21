@@ -44,7 +44,7 @@ function aaHeliRun(): array {
   // Take-off moments (checkOpstijgen); the take-off push itself belongs to the push module.
   $st=aaDb()->prepare('INSERT INTO kv (`key`, value, at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value), at = VALUES(at)');
   foreach(aaOpgestegen($helis,$prev,aaNow()) as $h)$st->execute(['heli_start:'.$h['id'],(string)aaNow(),aaNow()]);
-  if(setting('PUSH_ACTIEF')==='1'&&is_file(__DIR__.'/push.php')){
+  if(in_array(setting('PUSH_ACTIEF'),['1','eigen'],true)&&is_file(__DIR__.'/push.php')){
     require_once __DIR__.'/push.php';
     if(function_exists('aaHeliPushes'))aaHeliPushes($helis,$lucht,$prev,$geannuleerd);
   }

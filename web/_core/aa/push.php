@@ -10,7 +10,10 @@ require_once __DIR__.'/apple.php';
 require_once __DIR__.'/fcm.php';
 require_once __DIR__.'/waarschuwingen.php';
 
-function aaPushActief(): bool { return setting('PUSH_ACTIEF')==='1'; }
+/** PUSH_ACTIEF: "1" = every device (after the switch); "eigen" = only devices that registered here themselves (the
+ * TestFlight test, while the Worker still serves everybody else); anything else = nothing is sent. */
+function aaPushModus(): string { $v=setting('PUSH_ACTIEF'); return $v==='1'?'alle':($v==='eigen'?'eigen':'uit'); }
+function aaPushActief(): bool { return aaPushModus()!=='uit'; }
 
 // ------------------------------------------------------------------ devices (db.js, rules.js deviceFrom)
 function aaDeviceRow(?array $d): ?array {
@@ -20,7 +23,7 @@ function aaDeviceRow(?array $d): ?array {
   foreach(['radius_km','lat','lon'] as $k)$d[$k]=$d[$k]===null?null:(float)$d[$k];
   return $d;
 }
-function aaActiveDevices(): array { return array_map('aaDeviceRow',aaDb()->query('SELECT * FROM devices WHERE enabled = 1')->fetchAll()); }
+function aaActiveDevices(): array { return array_map('aaDeviceRow',aaDb()->query('SELECT * FROM devices WHERE enabled = 1'.(aaPushModus()==='eigen'?' AND eigen = 1':''))->fetchAll()); }
 function aaGetDevice(string $token): ?array { $q=aaDb()->prepare('SELECT * FROM devices WHERE token = ?'); $q->execute([$token]); return aaDeviceRow($q->fetch()?:null); }
 function aaDeleteDevice(string $token): bool {
   $q=aaDb()->prepare('DELETE FROM devices WHERE token = ?'); $q->execute([$token]); $n=$q->rowCount();
@@ -48,8 +51,8 @@ function aaDeviceFrom(array $body): array {
 }
 function aaUpsertDevice(array $d): void {
   $now=aaNow();
-  aaDb()->prepare('INSERT INTO devices (token, platform, environment, language, app_version, enabled, plaatsen, diensten, prioriteiten, quiet, quiet_from, quiet_to, critical, radius_km, lat, lon, created_at, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE platform=VALUES(platform), environment=VALUES(environment), language=VALUES(language), app_version=VALUES(app_version),
+  aaDb()->prepare('INSERT INTO devices (token, platform, environment, language, app_version, enabled, plaatsen, diensten, prioriteiten, quiet, quiet_from, quiet_to, critical, radius_km, lat, lon, created_at, updated_at, eigen)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1) ON DUPLICATE KEY UPDATE eigen=1, platform=VALUES(platform), environment=VALUES(environment), language=VALUES(language), app_version=VALUES(app_version),
     enabled=VALUES(enabled), plaatsen=VALUES(plaatsen), diensten=VALUES(diensten), prioriteiten=VALUES(prioriteiten), quiet=VALUES(quiet), quiet_from=VALUES(quiet_from), quiet_to=VALUES(quiet_to),
     critical=VALUES(critical), radius_km=VALUES(radius_km), lat=VALUES(lat), lon=VALUES(lon), updated_at=VALUES(updated_at)')
     ->execute([$d['token'],$d['platform'],$d['environment'],$d['language'],$d['app_version'],$d['enabled']?1:0,aaJson($d['plaatsen']),aaJson($d['diensten']),aaJson($d['prioriteiten']),
@@ -280,7 +283,7 @@ function aaNotePushes(array $list): void {
 /** Sends what waits in the outbox (at most $max). Does nothing while PUSH_ACTIEF is not "1". */
 function aaDrain(int $max=45): array {
   if(!aaPushActief())return ['actief'=>false,'verstuurd'=>0];
-  $q=aaDb()->prepare('SELECT o.guid, o.token, o.created_at, d.environment, d.language FROM outbox o JOIN devices d ON d.token = o.token ORDER BY o.created_at LIMIT '.max(1,$max)); $q->execute();
+  $q=aaDb()->prepare('SELECT o.guid, o.token, o.created_at, d.environment, d.language FROM outbox o JOIN devices d ON d.token = o.token'.(aaPushModus()==='eigen'?' WHERE d.eigen = 1':'').' ORDER BY o.created_at LIMIT '.max(1,$max)); $q->execute();
   $rows=$q->fetchAll(); $items=[]; $done=aaDb()->prepare('DELETE FROM outbox WHERE guid = ? AND token = ?'); $sent=[];
   foreach($rows as $row){ $g=$row['guid']; if(array_key_exists($g,$items))continue;
     if(str_starts_with($g,'w:')){ $parts=explode(':',$g); $kind=$parts[1]??'n'; $w=aaGetWarning(implode(':',array_slice($parts,2))); $items[$g]=$w?['warning'=>$w,'kind'=>$kind]:null; }

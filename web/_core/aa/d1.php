@@ -109,7 +109,13 @@ try{
       foreach($tabellen as $t){
         $rows=aaD1('SELECT rowid AS _rid, * FROM '.$t.' LIMIT 20000');
         // Removed on the Worker (a device that unsubscribed, a hidden item): removed here too.
-        aaDb()->beginTransaction(); aaDb()->exec('DELETE FROM `'.$t.'`'); aaD1Schrijf($t,$rows); aaDb()->commit();
+        // Devices that registered here themselves (eigen = 1) are this server's own: never removed or overwritten.
+        $eigenTokens=in_array($t,['devices','device_prefs','device_install'],true)?aaDb()->query('SELECT token FROM devices WHERE eigen = 1')->fetchAll(PDO::FETCH_COLUMN):[];
+        if($eigenTokens){ $ek=array_flip($eigenTokens); $rows=array_values(array_filter($rows,fn($r)=>!isset($ek[$r['token']??'']))); }
+        aaDb()->beginTransaction();
+        if($eigenTokens)aaDb()->prepare('DELETE FROM `'.$t.'` WHERE token NOT IN ('.implode(',',array_fill(0,count($eigenTokens),'?')).')')->execute($eigenTokens);
+        else aaDb()->exec('DELETE FROM `'.$t.'`');
+        aaD1Schrijf($t,$rows); aaDb()->commit();
         $status['tellingen'][$t]=count($rows);
       }
       if($min===15){

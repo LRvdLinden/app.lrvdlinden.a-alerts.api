@@ -32,7 +32,9 @@ data={key:value for key,value in data.items() if value}
 # Not secret: the own client identity of this server for the Koyeb P2000 stream (format homey-<24 hex>-<app id>).
 # Deliberately different from the identity of the Cloudflare Worker, so the two connections never replace each other.
 for k,v in {"RETENTION_DAYS":"3","APN_TOPIC":"nl.lrvdlinden.p2000apeldoorn","MIN_BUILD_IOS":"0","MIN_BUILD_ANDROID":"0",
- "WEB_WEATHERKIT_SERVICE_ID":"nl.lrvdlinden.p2000apeldoorn.weatherkit"}.items():data.setdefault(k,os.getenv(k,"").strip() or v)
+ "WEB_WEATHERKIT_SERVICE_ID":"nl.lrvdlinden.p2000apeldoorn.weatherkit",
+ # Pushes only to devices that registered here (TestFlight test); "1" at the switch, after explicit approval.
+ "PUSH_ACTIEF":"eigen"}.items():data.setdefault(k,os.getenv(k,"").strip() or v)
 data["KOYEB_SUBPROTOCOL"]=os.getenv("KOYEB_SUBPROTOCOL","").strip() or "homey-a11ea1eaa11ea1eaa11ea1eb-nl.lrvdlinden.p2000"
 if not data:
  print("SOURCE_SECRETS_MISSING: configure at least one named source secret");sys.exit(0)

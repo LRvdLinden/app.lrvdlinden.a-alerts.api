@@ -167,7 +167,7 @@ function aaStatusTick(int $now): void {
   if($now-$buf['since']>=10*AA_MIN){$flush($buf);$buf=['dag'=>$dag,'since'=>$now,'n'=>[]];}
   aaKvSet('aa_status_buf',aaJson($buf));
   // Beheer pushes on changes: only when this server is the production one (PUSH_ACTIEF), else the beheer gets everything twice.
-  if(!aaPushActief())return;
+  if(aaPushModus()!=='alle')return; // admin pushes stay with the Worker until the switch
   $meld=[]; $vorige=aaParse(aaKvGet('status_alerts'),[])?:[]; $sinds=aaParse(aaKvGet('status_sinds'),[])?:[];
   foreach(aaOnderdelen() as $o){ $st=$s[$o['id']]['staat']??'ok'; $slecht=$st==='warn'||$st==='down';
     if(!$slecht)unset($sinds[$o['id']]); elseif(empty($sinds[$o['id']])||$sinds[$o['id']]['staat']!==$st)$sinds[$o['id']]=['staat'=>$st,'at'=>$now];

@@ -151,10 +151,12 @@ function docsLiveState(): array {
     // Own activity: weather or routes fetched after the copy of the Worker database was made.
     'staat'=>$apple&&max($wAt,$rAt)>(docsMsOf($d1['vol_klaar']??null)??PHP_INT_MAX)?'live':($apple?'deels':'gepland'),'laatst'=>max($wAt,$rAt)?:null,
     'detail'=>'Sleutels '.(docsSet('WEB_WEATHERKIT_P8')&&docsSet('MAPS_SERVER_API_P8')&&docsSet('WEB_MAPKIT_JS_P8')?'aanwezig':'nog niet compleet').'. '.($apple?'Eigen routes staan op de server.':'Eigen routes nog in aanbouw.')];
-  $push=setting('PUSH_ACTIEF')==='1';
+  $pm=setting('PUSH_ACTIEF'); $push=$pm==='1'||$pm==='eigen';
+  $nEigen=0; try{ $nEigen=(int)$db->query('SELECT COUNT(*) FROM devices WHERE eigen = 1 AND enabled = 1')->fetchColumn(); }catch(Throwable){}
+  $pushAt=null; try{ $pushAt=(int)$db->query('SELECT MAX(bucket) FROM status_push')->fetchColumn()?:null; }catch(Throwable){}
   $out['bronnen'][]=['id'=>'push','naam'=>'Pushmeldingen (APNs, FCM)','icoon'=>'/images/website/aalerts-icon-180.png',
-    'staat'=>$push?'live':(docsModule('push.php')?'uit':'gepland'),'laatst'=>null,
-    'detail'=>($push?'Versturen staat aan.':'Versturen staat uit: de Worker verstuurt nu, anders krijgt iedereen alles dubbel.').' Sleutels '.(docsSet('APN_P8_CERT')&&docsSet('FCM_SERVICE_ACCOUNT')?'aanwezig':'nog niet compleet').'.'];
+    'staat'=>$push?'live':(docsModule('push.php')?'uit':'gepland'),'laatst'=>$pushAt,
+    'detail'=>($pm==='1'?'Versturen staat aan voor alle toestellen.':($pm==='eigen'?"Testfase: versturen alleen naar toestellen die zich zelf bij deze API hebben aangemeld (nu $nEigen, de TestFlight-app). Alle andere toestellen krijgen hun meldingen nog van de Worker; de app meldt zich bij de Worker af, dus niets dubbel.":'Versturen staat uit: de Worker verstuurt nu, anders krijgt iedereen alles dubbel.')).' Sleutels '.(docsSet('APN_P8_CERT')&&docsSet('FCM_SERVICE_ACCOUNT')?'aanwezig':'nog niet compleet').'.'];
 
   $staat=function(string $id)use(&$out){ foreach($out['bronnen'] as $b)if($b['id']===$id)return $b['staat']; return null; };
   // --- building blocks of the migration

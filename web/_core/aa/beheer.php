@@ -193,7 +193,7 @@ function aaPushAdminsBeheer(string $title, string $body, ?string $kind=null): ar
   return ['sent'=>$sent,'total'=>count($list)];
 }
 /** Beheer pushes for user feedback: only from the production server (PUSH_ACTIEF), else the beheer gets them twice. */
-function aaPushAdminsAlsActief(string $title, string $body): void { if(aaPushActief()){ try{aaPushAdminsBeheer($title,$body);}catch(Throwable){} } }
+function aaPushAdminsAlsActief(string $title, string $body): void { if(aaPushModus()==='alle'){ try{aaPushAdminsBeheer($title,$body);}catch(Throwable){} } }
 
 // ------------------------------------------------------------------ texts
 const AA_BEHEER_CONTENT=['privacy','cookies','terms','disclaimer','changelog','hulp','mededeling'];

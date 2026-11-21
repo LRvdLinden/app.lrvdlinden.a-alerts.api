@@ -150,3 +150,6 @@ ALTER TABLE downloads MODIFY COLUMN app VARCHAR(96), MODIFY COLUMN version VARCH
 ALTER TABLE admin_devices MODIFY COLUMN environment VARCHAR(64), MODIFY COLUMN platform VARCHAR(64);
 ALTER TABLE nieuws_fotos MODIFY COLUMN mime VARCHAR(191);
 ALTER TABLE status_dag MODIFY COLUMN onderdeel VARCHAR(191);
+-- Devices that registered with this API themselves (the TestFlight app on api.a-alerts.nl): kept by the D1 copy, and the
+-- only ones that get pushes while PUSH_ACTIEF is "eigen" (the Worker still serves everybody else).
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS eigen TINYINT NOT NULL DEFAULT 0;

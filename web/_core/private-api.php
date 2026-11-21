@@ -101,7 +101,7 @@ function apiRoute(string $path): bool {
       $adsb=aaParse(aaKvGet('adsb_fout'),null);
       $adsbVia=aaParse(aaKvGet('adsb_via'),null);
       privateReply(200,['shadow'=>true,'tabellen'=>$tabellen,'d1_overname'=>$d1,'adsb_laatste_fout'=>$adsb,'adsb_laatste_opvraag'=>$adsbVia,'p2000'=>['intake'=>$kv,'per_bron'=>$per,'worker_sinds_start'=>$spiegel,'ontbreekt_bij_eigen'=>$missing,
-        'voorbeelden_ontbrekend'=>array_values(array_filter($mist)),'push'=>setting('PUSH_ACTIEF')==='1'?'aan':'uit (de Worker verstuurt de pushmeldingen)']]);
+        'voorbeelden_ontbrekend'=>array_values(array_filter($mist)),'push'=>['modus'=>setting('PUSH_ACTIEF')?:'uit','eigen_toestellen'=>(int)$db->query('SELECT COUNT(*) FROM devices WHERE eigen = 1')->fetchColumn()]]]);
     }
     // Exact last answer of a Worker route, as stored by the mirror ("spiegel/meldingen", "spiegel/helikopters/status").
     if($first==='spiegel'){
