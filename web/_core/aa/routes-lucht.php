@@ -16,6 +16,11 @@ function aaRouteLucht(string $path): void {
         foreach($j as $jt){ $oud=null; foreach($a['toestellen'] as $i=>$t)if(($t['hex']??'')===$jt['hex']||($t['registratie']??'')===$jt['registratie'])$oud=$i;
           if($oud===null)$a['toestellen'][]=$jt; elseif((aaMs($a['toestellen'][$oud]['gezien']??null)??0)<(aaMs($jt['gezien'])??0))$a['toestellen'][$oud]=$jt; }
       }catch(Throwable $e){ error_log('[aa jet] '.$e->getMessage()); }
+      // ?bijzonder=1 (112Heli): a hiccup of the helicopter source must not throw away the jets. The list then only holds
+      // what is current (the jets from jet_posities), without "fout"/"verouderd", and says so in "alleen_jets".
+      if(($_GET['bijzonder']??'')==='1'&&(!empty($a['fout'])||!empty($a['verouderd']))){
+        $a['toestellen']=array_values(array_filter($a['toestellen'],fn($t)=>!empty($t['wereldwijd'])));
+        unset($a['fout'],$a['verouderd']); $a['alleen_jets']=true; }
       aaReply(200,$a,['Cache-Control'=>'public, max-age=10']); }
     if($method==='GET'&&$path==='/v1/helikopters/status'){ require_once __DIR__.'/heli-lib.php'; aaReply(200,aaHeliStatusAntwoord(),['Cache-Control'=>'public, max-age=30']); }
     if($method==='GET'&&preg_match('#^/v1/helikopters/([a-z0-9-]{3,40})/spoor$#',$path,$m)){
