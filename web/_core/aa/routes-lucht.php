@@ -29,7 +29,9 @@ function aaRouteLucht(string $path): void {
     }
     if($method==='GET'&&preg_match('#^/v1/helikopters/([a-z0-9-]{3,40})/vluchten$#',$path,$m)){ require_once __DIR__.'/heli-lib.php'; aaReply(200,aaVluchten($m[1]),['Cache-Control'=>'public, max-age=30']); }
     if($method==='POST'&&preg_match('#^/v1/helikopters/([a-z0-9-]{3,40})/melden$#',$path,$m)){ require_once __DIR__.'/lucht-feedback.php'; aaReply(200,aaToestelMelden($m[1])); }
-    if($method==='GET'&&$path==='/v1/verkeer'){ require_once __DIR__.'/verkeer-lib.php'; aaReply(200,aaVerkeer(),['Cache-Control'=>'public, max-age=60']); }
+    if($method==='GET'&&$path==='/v1/verkeer'){ require_once __DIR__.'/verkeer-lib.php';
+      $bb=array_map('floatval',array_filter(explode(',',(string)($_GET['bbox']??'')),'is_numeric')); $bb=count($bb)===4?$bb:null;
+      aaReply(200,aaVerkeer(($_GET['landelijk']??'')==='1',$bb),['Cache-Control'=>'public, max-age=60']); }
     $base='https://'.preg_replace('/[^a-z0-9.:-]/i','',(string)($_SERVER['HTTP_HOST']??'api.a-alerts.nl'));
     if($method==='GET'&&$path==='/v1/radar'){ require_once __DIR__.'/kaart-lib.php'; aaReply(200,aaRadarInfo($base),['Cache-Control'=>'public, max-age=60']); }
     if($method==='GET'&&$path==='/v1/radar.png'){ require_once __DIR__.'/kaart-lib.php'; aaRadarImage(); }
