@@ -153,3 +153,25 @@ ALTER TABLE status_dag MODIFY COLUMN onderdeel VARCHAR(191);
 -- Devices that registered with this API themselves (the TestFlight app on api.a-alerts.nl): kept by the D1 copy, and the
 -- only ones that get pushes while PUSH_ACTIEF is "eigen" (the Worker still serves everybody else).
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS eigen TINYINT NOT NULL DEFAULT 0;
+
+-- Positions of one private jet that is only recorded (never shown on a map in A-Alerts): PH-UTL (hex 4867e6).
+CREATE TABLE IF NOT EXISTS jet_posities (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  hex VARCHAR(8) NOT NULL,
+  registratie VARCHAR(16) NULL,
+  callsign VARCHAR(16) NULL,
+  type VARCHAR(8) NULL,
+  at BIGINT NOT NULL,
+  lat DOUBLE NOT NULL,
+  lon DOUBLE NOT NULL,
+  hoogte_ft INT NULL,
+  op_grond TINYINT NOT NULL DEFAULT 0,
+  snelheid_kt INT NULL,
+  koers INT NULL,
+  stijgsnelheid_fpm INT NULL,
+  squawk VARCHAR(8) NULL,
+  bron VARCHAR(16) NOT NULL,
+  ontvangen BIGINT NOT NULL,
+  UNIQUE KEY jet_hex_at (hex, at),
+  KEY jet_at (at)
+);

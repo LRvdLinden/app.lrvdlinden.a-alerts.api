@@ -37,6 +37,8 @@ const AA_LUCHT_NAMEN=['GL5T'=>'Global 5000','GLF6'=>'Gulfstream G650','GLF5'=>'G
 const AA_JAGERS=['F35','F16','EUFI','TOR','F18','F15','RFAL'];
 const AA_LUCHT_HELI=['H47','H64','AS32','AS3B','NH90','H60','EC25','H225','EC45','EC35','A139','A189','LYNX','MRF1','TIGR','H53','S61','S92','A149','AW10','EH10','UH1','B412','B06'];
 
+/** Aircraft that are only recorded (jet.php), never shown on a map or in a list. */
+const AA_NOOIT_TONEN=['4867e6'];
 function aaAdsbReset(): int { return (int)($GLOBALS['aa_adsb_reset']??0); }
 function aaHeliById(string $id): ?array { foreach(AA_HELIS as $h)if($h['id']===$id)return $h; return null; }
 function aaIdentify(array $ac, array $learned): ?array {
@@ -63,7 +65,7 @@ function aaRond(mixed $v): ?int { return is_int($v)||is_float($v)?(int)round($v)
 function aaNaamSort(array $list): array { $c=new Collator('en'); usort($list,fn($a,$b)=>$c->compare($a['naam'],$b['naam'])); return $list; }
 function aaFromAdsb(array $list, int $now, array $learned): array {
   $out=[];
-  foreach($list as $ac){ if(!is_array($ac))continue; $h=aaIdentify($ac,$learned); $p=aaPositie($ac); if(!$h||!$p)continue;
+  foreach($list as $ac){ if(!is_array($ac)||in_array(strtolower((string)($ac['hex']??'')),AA_NOOIT_TONEN,true))continue; $h=aaIdentify($ac,$learned); $p=aaPositie($ac); if(!$h||!$p)continue;
     $item=['id'=>$h['id'],'naam'=>$h['naam'],'soort'=>$h['soort']]+(!empty($h['medic'])?['medic'=>true]:[])+['basis'=>$h['basis']??null,'herkenning'=>$h['herkenning'],
       'callsign'=>trim((string)($ac['flight']??''))?:null,'registratie'=>aaOr($ac['r']??null),'type'=>aaOr($ac['t']??null),'hex'=>aaOr($ac['hex']??null),'lat'=>$p['lat'],'lon'=>$p['lon'],
       'koers'=>aaRond($ac['track']??null)??aaRond($ac['true_heading']??null),'hoogte_ft'=>aaRond($ac['alt_baro']??null),'op_grond'=>($ac['alt_baro']??null)==='ground',
@@ -92,7 +94,7 @@ function aaLuchtSoort(array $ac, array $learned): ?array {
 function aaLuchtLijst(array $list, int $now, array $overslaan, array $learned): array {
   $out=[];
   foreach($list as $ac){ if(!is_array($ac))continue; $hex=strtolower(trim((string)($ac['hex']??''))); $p=aaPositie($ac);
-    if($hex===''||isset($overslaan[$hex])||!$p)continue; $s=aaLuchtSoort($ac,$learned); if(!$s)continue;
+    if($hex===''||isset($overslaan[$hex])||in_array($hex,AA_NOOIT_TONEN,true)||!$p)continue; $s=aaLuchtSoort($ac,$learned); if(!$s)continue;
     $off=$s['soort']==='kustwacht';
     if($p['lat']<($off?50.3:50.7)||$p['lat']>($off?56.2:53.7)||$p['lon']<($off?-0.5:3.1)||$p['lon']>($off?8.3:7.3))continue;
     $reg=$s['registratie']??aaOr($ac['r']??null); unset($s['registratie']);

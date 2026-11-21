@@ -65,4 +65,6 @@ for($i=0;$i<3;$i++){
   }
   $wacht=$start+($i+1)*19-microtime(true); if($i<2&&$wacht>0)usleep((int)($wacht*1e6));
 }
+// PH-UTL: recorded only, once per run (see jet.php).
+try{ require_once __DIR__.'/jet.php'; $out[]=['jet'=>aaJetTick()]; }catch(Throwable $e){ $out[]=['jet_fout'=>substr($e->getMessage(),0,80)]; }
 echo 'heli '.json_encode($out)."\n";
