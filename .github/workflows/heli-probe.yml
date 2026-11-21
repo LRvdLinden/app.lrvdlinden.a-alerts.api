@@ -17,3 +17,7 @@ jobs:
             curl -s --max-time 20 -D /tmp/h.txt -o /tmp/b.txt "$u"; echo "== $u"; grep -iE "^HTTP|ratelimit|retry" /tmp/h.txt
             python3 -c "import json;d=json.load(open('/tmp/b.txt'));print('keys',list(d)[:6],'n',len(d.get('ac') or d.get('aircraft') or []))" || head -c 200 /tmp/b.txt
           done
+          for u in https://opendata.adsb.fi/api/v2/registration/PH-GOV https://opendata.adsb.fi/api/v2/hex/4867e6 https://api.adsb.lol/v2/reg/PH-GOV https://api.adsb.lol/v2/reg/PH-UTL; do
+            code=$(curl -s --max-time 20 -o /tmp/b.txt -w "%{http_code}" "$u"); echo "== $u $code"
+            python3 -c "import json;d=json.load(open('/tmp/b.txt'));a=d.get('ac') or d.get('aircraft') or [];print('keys',list(d)[:6],'n',len(a),[(x.get('hex'),x.get('r'),x.get('lat'),x.get('lon')) for x in a][:2])" 2>/dev/null || head -c 150 /tmp/b.txt; echo
+          done
