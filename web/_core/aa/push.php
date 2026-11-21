@@ -272,6 +272,23 @@ function aaQueueMelding(array $m): int {
   foreach($devices as $d){ $p=$prefs[$d['token']]??null; if(aaMeldingWanted($d,$p,$m)||aaGrootWanted($d,$p,$m))$t[]=$d['token']; }
   aaQueue($m['guid'],$t); return count($t);
 }
+/** index.js warnings(): queues NL-Alert, Burgernet, KNMI, Amber and VNOG pushes for the devices that want them. */
+function aaPushWaarschuwingen(array $toPush): int {
+  $devices=aaActiveDevices(); $prefs=aaDevicePrefs(); $n=0;
+  foreach($toPush as $t){
+    $kind=$t['kind']??(!empty($t['upgrade'])?'u':'n'); $w=aaGetWarning((string)$t['id']); if(!$w)continue;
+    $tok=[];
+    foreach($devices as $d){ $p=$prefs[$d['token']]??null;
+      if($kind==='v'&&($p['knmiVooraf']??null)===false)continue;
+      if($kind==='g'&&($p['knmiOpgeheven']??null)===false)continue;
+      if(($w['bron']??'')==='vnog'&&aaIsQuiet($d)&&!(!empty($d['critical'])&&(float)($w['grip']??0)>=1))continue;
+      if($kind==='g'){ $ok=false; foreach(($t['levels']??null)?:[$w['niveau']??null] as $niv)if(aaWarningWanted($d,$p,['niveau'=>$niv,'status'=>'actief']+$w)){$ok=true;break;} if(!$ok)continue; }
+      elseif(!aaWarningWanted($d,$p,$w))continue;
+      $tok[]=$d['token']; }
+    if($tok){ aaQueue("w:$kind:".$t['id'],$tok); $n+=count($tok); }
+  }
+  return $n;
+}
 function aaNotePushes(array $list): void {
   if(!$list)return; $bucket=intdiv(aaNow(),600000)*600000; $per=[];
   foreach($list as $p){ $s=&$per[$p['platform']]; $s??=['ok'=>0,'fail'=>0,'ls'=>0,'ln'=>0];

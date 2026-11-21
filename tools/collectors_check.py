@@ -42,6 +42,7 @@ for name,row in ((data or {}).get("vergelijking",{}) if isinstance(data,dict) el
  print("AANTAL",name,"eigen",row.get("eigen"),"spiegel",row.get("spiegel"),"worker",row.get("worker"),"ontbreekt_in_spiegel",row.get("ontbrekend_in_spiegel"))
 code,data=live("GET /v1/eigen")
 print("EIGEN http",code,json.dumps({k:data.get(k) for k in ("tabellen","d1_overname","adsb_laatste_fout","adsb_laatste_opvraag","p2000")} if isinstance(data,dict) else data,ensure_ascii=False)[:2500])
+print("PUSH",json.dumps(((data or {}).get("p2000") or {}).get("push") if isinstance(data,dict) else None,ensure_ascii=False))
 code,data=live("GET /v1/spiegel")
 print("SPIEGEL http",code)
 for row in (data or {}).get("spiegel",[]) if isinstance(data,dict) else []:

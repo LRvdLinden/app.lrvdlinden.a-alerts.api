@@ -3,7 +3,7 @@ declare(strict_types=1);
 /**
  * Own intake of the warning and news sources (cron, every minute): alerts.js ingestWarnings, nieuws.js nieuwsRun and the
  * housekeeping at minute 7, as in index.js. Pushes are only marked (notified), never sent here: sending is up to the push
- * module (aa/push.php) and only when PUSH_ACTIEF is "1".
+ * module (aa/push.php) when PUSH_ACTIEF is "1" (all devices) or "eigen" (devices registered at this API).
  *
  * Mode AA_BRONNEN_MODUS:
  * - "proef": every source is read for real and compared with what is stored now (the copy of the Worker database);
@@ -410,10 +410,14 @@ function aaBronnenHousekeeping(): void {
 }
 /** Hands the pushes to the push module, only when sending is switched on (otherwise the Worker sends them). */
 function aaBronnenPush(array $warnings, array $nieuws): void {
-  if(setting('PUSH_ACTIEF')!=='1'||AaProef::$aan)return;
-  if(is_file(__DIR__.'/push.php'))require_once __DIR__.'/push.php';
-  if($warnings&&function_exists('aaPushWaarschuwingen'))aaPushWaarschuwingen($warnings);
-  if($nieuws&&function_exists('aaPushNieuws'))foreach($nieuws as $id)aaPushNieuws($id,'p');
+  if(!in_array(setting('PUSH_ACTIEF'),['1','eigen'],true)||AaProef::$aan||(!$warnings&&!$nieuws))return;
+  try{
+    require_once __DIR__.'/push.php';
+    if($nieuws&&!function_exists('aaPushNieuws'))require_once __DIR__.'/beheer.php';
+    if($warnings)aaPushWaarschuwingen($warnings);
+    foreach($nieuws as $id)aaPushNieuws((string)$id,'p');
+    aaDrain(200);
+  }catch(Throwable $e){ error_log('[aa bronnen push] '.$e->getMessage()); }
 }
 
 // ------------------------------------------------------------------ cron run
