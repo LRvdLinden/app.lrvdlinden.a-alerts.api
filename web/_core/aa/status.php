@@ -169,12 +169,14 @@ function aaStatusTick(int $now): void {
   // Beheer pushes on changes: only when this server is the production one (PUSH_ACTIEF), else the beheer gets everything twice.
   if(aaPushModus()!=='alle')return; // admin pushes stay with the Worker until the switch
   $meld=[]; $vorige=aaParse(aaKvGet('status_alerts'),[])?:[]; $sinds=aaParse(aaKvGet('status_sinds'),[])?:[];
-  foreach(aaOnderdelen() as $o){ $st=$s[$o['id']]['staat']??'ok'; $slecht=$st==='warn'||$st==='down';
-    if(!$slecht)unset($sinds[$o['id']]); elseif(empty($sinds[$o['id']])||$sinds[$o['id']]['staat']!==$st)$sinds[$o['id']]=['staat'=>$st,'at'=>$now];
+  // Only a real outage ("storing" for 10 minutes) and "werkt weer" after 5 minutes fine; warn stays on the status page.
+  foreach(aaOnderdelen() as $o){ $st=$s[$o['id']]['staat']??'ok'; $fase=$st==='down'?'down':($st==='warn'?'warn':'ok');
+    if(empty($sinds[$o['id']])||$sinds[$o['id']]['staat']!==$fase)$sinds[$o['id']]=['staat'=>$fase,'at'=>$now];
     $gem=$vorige[$o['id']]??null;
-    if($slecht&&$now-$sinds[$o['id']]['at']>=3*AA_MIN&&$gem!==$st){ $extra=implode(' · ',array_filter([$s[$o['id']]['detail']??null,$s[$o['id']]['fout']??null]));
-      $meld[]=[($st==='down'?'🔴':'🟠').' '.$o['naam'].': '.($st==='down'?'storing':'wijkt af'),$extra?:'Wijkt al 3 minuten af van normaal.']; $vorige[$o['id']]=$st; }
-    elseif(!$slecht&&$gem){ $meld[]=['✅ '.$o['naam'].' werkt weer','Weer normaal.']; unset($vorige[$o['id']]); } }
+    if($fase==='down'&&$now-$sinds[$o['id']]['at']>=10*AA_MIN&&!$gem){ $extra=implode(' · ',array_filter([$s[$o['id']]['detail']??null,$s[$o['id']]['fout']??null]));
+      $meld[]=['🔴 '.$o['naam'].': storing',$extra?:'Al 10 minuten een storing.']; $vorige[$o['id']]='down'; }
+    elseif($fase==='ok'&&$gem&&$now-$sinds[$o['id']]['at']>=5*AA_MIN){ $meld[]=['✅ '.$o['naam'].' werkt weer','Weer normaal.']; unset($vorige[$o['id']]); }
+    if($fase==='ok'&&!$gem)unset($sinds[$o['id']]); }
   $afw=aaAfwijkingen($now);
   foreach($afw as $a)if(empty($vorige['x:'.$a['id']])){$meld[]=['🟠 A-Alerts wijkt af',$a['tekst']];$vorige['x:'.$a['id']]='warn';}
   $act=array_map(fn($a)=>'x:'.$a['id'],$afw); foreach(array_keys($vorige) as $k)if(str_starts_with($k,'x:')&&!in_array($k,$act,true))unset($vorige[$k]);
