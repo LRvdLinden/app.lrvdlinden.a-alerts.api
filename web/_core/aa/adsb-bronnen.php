@@ -124,11 +124,26 @@ function aaAdsbGebied(): array {
     $body = $code === 200 ? $parser($raw) : null;
     if ($code === 200 && !$body) $code = 502;
     aaAdsbNoteer($s, $id, $code, $cerr, $hdr);
-    if ($body) { aaAdsbStaatOpslaan($s); return $body + ['bron' => $naam, 'via' => $id, 'http' => 200]; }
+    if ($body) { aaAdsbProbeerReserve($s, $alle, $id); aaAdsbStaatOpslaan($s); return $body + ['bron' => $naam, 'via' => $id, 'http' => 200]; }
     $fouten[] = $id . ' ' . ($code ?: 'curl ' . $cerr);
   }
   aaAdsbStaatOpslaan($s);
   throw new RuntimeException('ADS-B: geen bron beschikbaar' . ($fouten ? ' (' . implode(', ', $fouten) . ')' : ' (alle bronnen in rust)'));
+}
+
+/**
+ * Every 30 minutes one test request to a reserve (OpenSky, Koyeb relay) that was not asked in that time, so /docs and the
+ * beheer show whether the reserves work before they are needed. Costs OpenSky and Koyeb about 48 requests a day each.
+ */
+function aaAdsbProbeerReserve(array &$s, array $alle, string $gebruikt): void {
+  foreach (['opensky', 'koyeb'] as $id) {
+    if ($id === $gebruikt || !isset($alle[$id]) || aaNow() - (aaMs($s[$id]['laatst'] ?? null) ?? 0) < 1800000) continue;
+    if (!aaAdsbMag($s, $id)) continue;
+    [, $url, $kop, $parser] = $alle[$id];
+    [$code, $raw, $cerr, $hdr] = aaAdsbGet($url, $kop);
+    aaAdsbNoteer($s, $id, $code === 200 && $parser($raw) ? 200 : ($code === 200 ? 502 : $code), $cerr, $hdr);
+    return; // one test per round
+  }
 }
 
 /**
