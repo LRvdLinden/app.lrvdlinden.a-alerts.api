@@ -243,6 +243,8 @@ function aaIngestWarnings(): array {
       $d=aaBronJson(AA_SOURCES['knmi'].'.json'); $pagina=[];
       if(!empty($d['warning_events'])){ try{ $pagina=aaKnmiPagina(aaBronFetch('https://www.knmi.nl/nederland-nu/weer/waarschuwingen','text/html')); }catch(Throwable){} }
       $list=aaFromKnmi($d,$now,$pagina); $handle('knmi',$list); $ids=array_flip(array_map(fn($w)=>$w['id'],$list));
+      // All of the Netherlands for the national weather layer (/v1/weer/landelijk); not stored as warnings.
+      if(!AaProef::$aan){ try{ aaKvWrite('knmi_landelijk',aaJson(['at'=>aaNow(),'items'=>aaKnmiLandelijk($d,$now)])); }catch(Throwable){} }
       $q=aaDb()->prepare("SELECT id, start_at FROM waarschuwingen WHERE bron = 'knmi' AND end_at >= ? AND status != 'beeindigd'"); $q->execute([$now]);
       foreach($q->fetchAll() as $r)if(!isset($ids[$r['id']])){ if(AaProef::$aan)AaProef::verschil('knmi',$r['id'],'status','beeindigd','actief'); else aaSchrijf("UPDATE waarschuwingen SET status = 'beeindigd', end_at = ?, updated_at = ? WHERE id = ?",[max((int)$r['start_at'],$now),$now,$r['id']]); }
       if(!AaProef::$aan)aaKvWrite('knmi_revision',"v3:$rev@".aaNow());

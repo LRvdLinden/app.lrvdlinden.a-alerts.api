@@ -232,6 +232,30 @@ function aaKnmiPagina(mixed $html): array {
   }
   return $uit;
 }
+/**
+ * All KNMI warning areas of the Netherlands (not only those over the working area), for the national weather layer:
+ * per area the level, kind, period, outline and texts. Not stored as warnings: never a push, never in the lists.
+ */
+function aaKnmiLandelijk(mixed $data, int $now): array {
+  $uit=[];
+  foreach((is_array($data['warning_events']??null)?$data['warning_events']:[]) as $ei=>$ev){
+    $evid=array_key_exists('id',$ev)&&$ev['id']!==null?$ev['id']:$ei;
+    $phen=aaTxt($ev['label']??null); if($phen==='')$phen=(string)aaKnmiNaam(aaTxt($ev['phenomenon']??null));
+    foreach($ev['periods']??[] as $period){
+      $start=aaDateParse($period['starts_at']??null); $end=aaDateParse($period['ends_at']??null);
+      if($start===null||$end===null||$end<$now)continue;
+      foreach($period['parts']??[] as $i=>$p){
+        $niveau=aaBrNormLevel($p['level']??null); if($niveau==='green')continue;
+        $rings=aaGeomRings($p['geometry']??null);
+        $uit[]=['id'=>'knmi:'.(is_bool($evid)?($evid?'true':'false'):$evid).':'.($period['starts_at']).':'.$i,'soort'=>$phen!==''?$phen:'Weerwaarschuwing','niveau'=>$niveau,
+          'gebied_naam'=>aaOr(aaTxt($p['area_description']??null)),'start'=>aaIso($start),'einde'=>aaIso($end),'status'=>$start>$now?'verwacht':'actief',
+          'verwachting'=>aaOr(aaTxt($p['impact']??null)),'advies'=>aaOr(aaTxt($p['instruction']??null)),'gebied'=>$rings?aaSimplify($rings,250):null];
+      }
+    }
+  }
+  usort($uit,fn($a,$b)=>aaLevelRank($b['niveau'])<=>aaLevelRank($a['niveau'])?:strcmp($a['start'],$b['start']));
+  return $uit;
+}
 function aaFromKnmi(mixed $data, int $now, array $pagina=[]): array {
   $events=is_array($data['warning_events']??null)?$data['warning_events']:[]; $out=[];
   foreach($events as $ei=>$ev){

@@ -29,6 +29,11 @@ function aaRouteLucht(string $path): void {
     }
     if($method==='GET'&&preg_match('#^/v1/helikopters/([a-z0-9-]{3,40})/vluchten$#',$path,$m)){ require_once __DIR__.'/heli-lib.php'; aaReply(200,aaVluchten($m[1]),['Cache-Control'=>'public, max-age=30']); }
     if($method==='POST'&&preg_match('#^/v1/helikopters/([a-z0-9-]{3,40})/melden$#',$path,$m)){ require_once __DIR__.'/lucht-feedback.php'; aaReply(200,aaToestelMelden($m[1])); }
+    // KNMI warning areas of all of the Netherlands (map layer "Weer in Nederland"); refreshed when the KNMI changes.
+    if($method==='GET'&&$path==='/v1/weer/landelijk'){ $k=aaParse(aaKvGet('knmi_landelijk'),null); $nu=aaNow();
+      $items=array_values(array_filter(is_array($k['items']??null)?$k['items']:[],fn($i)=>(aaMs($i['einde']??null)??0)>=$nu));
+      foreach($items as &$i)$i['status']=(aaMs($i['start'])??0)>$nu?'verwacht':'actief'; unset($i);
+      aaReply(200,['bijgewerkt'=>is_array($k)?aaIso((int)($k['at']??0)):null,'items'=>$items,'bron'=>'KNMI','link'=>'https://www.knmi.nl/nederland-nu/weer/waarschuwingen'],['Cache-Control'=>'public, max-age=120']); }
     if($method==='GET'&&$path==='/v1/verkeer'){ require_once __DIR__.'/verkeer-lib.php';
       $bb=array_map('floatval',array_filter(explode(',',(string)($_GET['bbox']??'')),'is_numeric')); $bb=count($bb)===4?$bb:null;
       aaReply(200,aaVerkeer(($_GET['landelijk']??'')==='1',$bb),['Cache-Control'=>'public, max-age=60']); }
