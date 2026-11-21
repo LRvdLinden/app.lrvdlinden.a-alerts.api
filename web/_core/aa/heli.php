@@ -57,6 +57,8 @@ try{ aaEnsureSchema(aaDb()); }catch(Throwable $e){ fwrite(STDERR,"schema\n"); ex
 $start=microtime(true); $out=[];
 for($i=0;$i<3;$i++){
   try{ $out[]=aaHeliRun(); }catch(Throwable $e){ $out[]=['fout'=>substr($e->getMessage(),0,80)]; }
+  // PH-UTL and PH-GOV, worldwide, three times a minute (see jet.php; 112Heli wants positions under 60 s old).
+  try{ require_once __DIR__.'/jet.php'; $out[]=['jet'=>aaJetTick()]; }catch(Throwable $e){ $out[]=['jet_fout'=>substr($e->getMessage(),0,80)]; }
   if($i===0&&(int)gmdate('i')%10===0){
     try{
       aaDb()->prepare('DELETE FROM heli_posities WHERE at < ?')->execute([aaNow()-AA_SPOOR_KEEP_MS]);
@@ -65,6 +67,4 @@ for($i=0;$i<3;$i++){
   }
   $wacht=$start+($i+1)*19-microtime(true); if($i<2&&$wacht>0)usleep((int)($wacht*1e6));
 }
-// PH-UTL: recorded only, once per run (see jet.php).
-try{ require_once __DIR__.'/jet.php'; $out[]=['jet'=>aaJetTick()]; }catch(Throwable $e){ $out[]=['jet_fout'=>substr($e->getMessage(),0,80)]; }
 echo 'heli '.json_encode($out)."\n";

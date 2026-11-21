@@ -1,10 +1,13 @@
 <?php
-// Jets that are recorded worldwide, once a minute, by registration: PH-UTL (Max Verstappen, hex 4867e6; never shown in
+// Jets that are recorded worldwide, three times a minute, by registration: PH-UTL (Max Verstappen, hex 4867e6; never shown in
 // A-Alerts) and PH-GOV (the government aircraft). Positions only go into the table jet_posities. From adsb.lol while it
 // has requests left (500 a day per address, shared with the helicopters), otherwise from adsb.fi (1 request a second).
 declare(strict_types=1);
 
-const AA_JETS = [['hex' => '4867e6', 'registratie' => 'PH-UTL'], ['hex' => null, 'registratie' => 'PH-GOV']];
+const AA_JETS = [
+  ['hex' => '4867e6', 'registratie' => 'PH-UTL', 'soort' => 'bijzonder', 'icoon' => 'verstappen', 'naam' => 'Max Verstappen (PH-UTL)'],
+  ['hex' => null, 'registratie' => 'PH-GOV', 'soort' => 'regering', 'icoon' => 'phgov', 'naam' => 'Regeringsvliegtuig PH-GOV'],
+];
 
 
 function aaJetHaal(string $url, array $extra = []): array {
@@ -53,4 +56,22 @@ function aaJetTick(): int {
   }
   aaKvSet('jet_laatste', aaJson(['at' => aaIso(aaNow()), 'nieuw' => $nieuw, 'per_toestel' => $ronde ?? []]));
   return $nieuw;
+}
+
+/**
+ * The jets as /v1/lucht aircraft, only for /v1/lucht?bijzonder=1 (112Heli). The A-Alerts apps and site never ask for it,
+ * so Max is never on their map. Last known position of the past 10 minutes, worldwide; same fields as the other aircraft.
+ */
+function aaJetToestellen(): array {
+  $out = [];
+  $q = aaDb()->prepare('SELECT * FROM jet_posities WHERE registratie = ? AND at >= ? ORDER BY at DESC LIMIT 1');
+  foreach (AA_JETS as $jet) {
+    $q->execute([$jet['registratie'], aaNow() - 600000]); $r = $q->fetch(); if (!$r) continue;
+    $out[] = ['id' => 'lucht-' . $r['hex'], 'soort' => $jet['soort'], 'icoon' => $jet['icoon'], 'naam' => $jet['naam'],
+      'callsign' => $r['callsign'] ?: null, 'registratie' => $jet['registratie'], 'type' => $r['type'] ?: null, 'hex' => $r['hex'],
+      'lat' => (float)$r['lat'], 'lon' => (float)$r['lon'], 'koers' => $r['koers'] === null ? null : (int)$r['koers'],
+      'hoogte_ft' => $r['hoogte_ft'] === null ? null : (int)$r['hoogte_ft'], 'op_grond' => (bool)$r['op_grond'],
+      'snelheid_kt' => $r['snelheid_kt'] === null ? null : (int)$r['snelheid_kt'], 'gezien' => aaIso((int)$r['at']), 'wereldwijd' => true];
+  }
+  return $out;
 }
