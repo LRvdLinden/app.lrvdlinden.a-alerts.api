@@ -133,10 +133,10 @@ function docsLiveState(): array {
   $via=json_decode((string)(docsKv($db,'adsb_via')??''),true); $fout=json_decode((string)(docsKv($db,'adsb_fout')??''),true);
   $viaAt=is_array($via)?docsMsOf((string)($via['at']??'')):null; $foutAt=is_array($fout)?docsMsOf((string)($fout['at']??'')):null;
   $viaOk=is_array($via)&&(int)($via['http']??0)===200;
-  $viaTekst=is_array($via)?'Laatste opvraag '.docsAgo($viaAt).' '.(($via['via']??'')==='koyeb'?'via de eigen Koyeb-dienst (reserve)':'rechtstreeks bij adsb.lol').' · HTTP '.(int)($via['http']??0).'. ':'';
+  $viaTekst=is_array($via)?'Laatste opvraag '.docsAgo($viaAt).' '.(($via['via']??'')==='koyeb'?'via de eigen Koyeb-dienst (reserve)':(($via['via']??'')==='adsb.fi'?'bij adsb.fi (reserve)':'rechtstreeks bij adsb.lol')).' · HTTP '.(int)($via['http']??0).'. ':'';
   $out['bronnen'][]=['id'=>'adsb','naam'=>'Helikopters & luchtvaart (adsb.lol)','icoon'=>'/images/website/heli_lifeliner.png',
     'staat'=>$lucht&&$viaOk&&$viaAt&&$now-$viaAt<180000?'live':($lucht&&$viaAt&&$now-$viaAt<180000?'fout':($lucht?'deels':'gepland')),'laatst'=>$viaAt?:($lucht?(max($snap??0,$heliPos)?:null):null),
-    'detail'=>$viaTekst.'adsb.lol weigert het gedeelde adres van de hosting regelmatig (HTTP 429); dan vraagt de server een minuut niet rechtstreeks en komt dezelfde adsb.lol-data via de eigen Koyeb-dienst. Laatste vastgelegde positie: '.docsAgo($heliPos?:null).'.'
+    'detail'=>$viaTekst.'adsb.lol staat per adres nog maar 500 opvragen per dag toe; daarna (HTTP 429) wacht de server tot de teller terugspringt (hoogstens een uur) en komen de posities van adsb.fi. Lukt dat ook niet, dan via de eigen Koyeb-dienst. Laatste vastgelegde positie: '.docsAgo($heliPos?:null).'.'
       .(is_array($fout)&&$foutAt&&(!$viaOk||$foutAt>($viaAt??0))?' Laatste fout: '.(string)($fout['fout']??'').' ('.docsAgo($foutAt).').':'')];
   // --- traffic
   $vk=docsKvAt($db,'verkeer');

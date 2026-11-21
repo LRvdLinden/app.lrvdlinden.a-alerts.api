@@ -37,6 +37,7 @@ const AA_LUCHT_NAMEN=['GL5T'=>'Global 5000','GLF6'=>'Gulfstream G650','GLF5'=>'G
 const AA_JAGERS=['F35','F16','EUFI','TOR','F18','F15','RFAL'];
 const AA_LUCHT_HELI=['H47','H64','AS32','AS3B','NH90','H60','EC25','H225','EC45','EC35','A139','A189','LYNX','MRF1','TIGR','H53','S61','S92','A149','AW10','EH10','UH1','B412','B06'];
 
+function aaAdsbReset(): int { return (int)($GLOBALS['aa_adsb_reset']??0); }
 function aaHeliById(string $id): ?array { foreach(AA_HELIS as $h)if($h['id']===$id)return $h; return null; }
 function aaIdentify(array $ac, array $learned): ?array {
   $cs=strtoupper(trim((string)($ac['flight']??''))); $reg=strtoupper(trim((string)($ac['r']??''))); $hex=strtolower(trim((string)($ac['hex']??'')));
@@ -134,7 +135,8 @@ function aaHelikopters(): array {
     $haal=function(string $url,array $extra){
       $ch=curl_init($url);
       curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>8,CURLOPT_CONNECTTIMEOUT=>4,CURLOPT_ENCODING=>'',
-        CURLOPT_HTTPHEADER=>array_merge(['Accept: application/json','User-Agent: A-Alerts/1.0 (+https://a-alerts.nl)'],$extra)]);
+        CURLOPT_HTTPHEADER=>array_merge(['Accept: application/json','User-Agent: A-Alerts/1.0 (+https://a-alerts.nl)'],$extra),
+        CURLOPT_HEADERFUNCTION=>function($c,$h){ if(stripos($h,'x-ratelimit-reset:')===0)$GLOBALS['aa_adsb_reset']=(int)trim(substr($h,18)); return strlen($h); }]);
       $raw=curl_exec($ch); $code=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); $cerr=curl_errno($ch); curl_close($ch);
       return [$code,$raw,$cerr];
     };
@@ -144,7 +146,18 @@ function aaHelikopters(): array {
     $code=0; $raw=''; $cerr=0; $via='direct';
     if(aaNow()>=(int)(aaKvGet('adsb_pauze_tot')??0)){
       [$code,$raw,$cerr]=$haal('https://api.adsb.lol/v2/point/52.2/5.4/160',setting('ADSB_LOL_API_KEY')!==''?['api-auth: '.setting('ADSB_LOL_API_KEY')]:[]);
-      if($code===429)aaKvSet('adsb_pauze_tot',(string)(aaNow()+60000));
+      // adsb.lol allows 500 requests a day per address; out of them (429): rest until the reset (at most an hour).
+      if($code===429)aaKvSet('adsb_pauze_tot',(string)(aaNow()+60000*max(1,min(60,(int)ceil(aaAdsbReset()/60)))));
+    }
+    $bron='adsb.lol (ODbL)';
+    if($code!==200){
+      // Reserve: adsb.fi (same readsb data, "aircraft" instead of "ac"; "now" can be in seconds).
+      [$c2,$r2,$e2]=$haal('https://opendata.adsb.fi/api/v2/lat/52.2/lon/5.4/dist/160',[]);
+      $fi=$c2===200?json_decode((string)$r2,true):null;
+      if(is_array($fi)&&is_array($fi['ac']??$fi['aircraft']??null)){
+        $n=(float)($fi['now']??0); $raw=json_encode(['ac'=>$fi['ac']??$fi['aircraft'],'now'=>$n>0&&$n<1e11?(int)($n*1000):(int)$n]);
+        $code=200; $cerr=0; $via='adsb.fi'; $bron='adsb.fi';
+      }
     }
     if($code!==200&&setting('VERKEER_URL')!==''&&setting('VERKEER_TOKEN')!==''){
       $direct=$code;
@@ -172,7 +185,7 @@ function aaHelikopters(): array {
     foreach($laatste as $id=>$v)if(aaNow()-(aaMs($v['gezien'])??0)>600000)unset($laatste[$id]);
     foreach($list as &$h){$h['boven']=$h['op_grond']?null:(aaPlaatsBij($h['lat'],$h['lon'])['tekst']??null);} unset($h);
     foreach($lucht as &$h){$h['boven']=$h['op_grond']?null:(aaPlaatsBij($h['lat'],$h['lon'])['tekst']??null);} unset($h);
-    $data=['bijgewerkt'=>aaIso(aaNow()),'bron'=>'adsb.lol (ODbL)','helikopters'=>$list,'lucht'=>$lucht]; $failing=false;
+    $data=['bijgewerkt'=>aaIso(aaNow()),'bron'=>$bron,'helikopters'=>$list,'lucht'=>$lucht]; $failing=false;
   }catch(Throwable $e){
     if(str_contains($e->getMessage(),'HTTP 429'))try{aaKvSet('adsb_pauze_tot',(string)(aaNow()+60000));}catch(Throwable){}
     // Why it failed, for /docs and the checks (never a key in it): HTTP code or curl error number.
