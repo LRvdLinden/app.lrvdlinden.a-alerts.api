@@ -21,6 +21,8 @@ jobs:
               except urllib.error.HTTPError as e: return e.code, None
           c,b=call(A,"POST","/v1/beheer/login",{"user":os.environ["BEHEER_USER"],"password":os.environ["BEHEER_PASSWORD"]})
           print("LOGIN api", c); tok=(b or {}).get("token")
+          cw,bw=call(W,"POST","/v1/beheer/login",{"user":os.environ["BEHEER_USER"],"password":os.environ["BEHEER_PASSWORD"]})
+          print("LOGIN worker", cw, "secrets gezet:", bool(os.environ["BEHEER_USER"]), len(os.environ["BEHEER_PASSWORD"])>=6)
           if not tok: raise SystemExit("geen sessie")
           print("TOKEN geldig op Worker", call(W,"GET","/v1/beheer/me",tok=tok)[0])
           for p in ["/v1/beheer/me","/v1/beheer/overview","/v1/beheer/meldingen?limit=5","/v1/beheer/waarschuwingen","/v1/beheer/nieuws?limit=5",
