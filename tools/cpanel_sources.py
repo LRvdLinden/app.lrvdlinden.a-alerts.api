@@ -33,8 +33,9 @@ data={key:value for key,value in data.items() if value}
 # Deliberately different from the identity of the Cloudflare Worker, so the two connections never replace each other.
 for k,v in {"RETENTION_DAYS":"3","APN_TOPIC":"nl.lrvdlinden.p2000apeldoorn","MIN_BUILD_IOS":"0","MIN_BUILD_ANDROID":"0",
  "WEB_WEATHERKIT_SERVICE_ID":"nl.lrvdlinden.p2000apeldoorn.weatherkit",
- # Pushes only to devices that registered here (TestFlight test); "1" at the switch, after explicit approval.
- "PUSH_ACTIEF":"eigen","HOMEY_VIA_API":"1"}.items():data.setdefault(k,os.getenv(k,"").strip() or v)
+ # Since 21-11-2026 this server is the only one: pushes to every device, no copy of the Cloudflare Worker any more
+ # (the Worker only passes requests of old apps on to this server).
+ "PUSH_ACTIEF":"1","HOMEY_VIA_API":"1","WORKER_SPIEGEL":"0"}.items():data.setdefault(k,os.getenv(k,"").strip() or v)
 data["KOYEB_SUBPROTOCOL"]=os.getenv("KOYEB_SUBPROTOCOL","").strip() or "homey-a11ea1eaa11ea1eaa11ea1eb-nl.lrvdlinden.p2000"
 if not data:
  print("SOURCE_SECRETS_MISSING: configure at least one named source secret");sys.exit(0)

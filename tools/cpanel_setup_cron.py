@@ -38,8 +38,9 @@ jobs+=[("status","*", "*/1")]
 # a number of IP addresses; the production Worker polls it already, so a second poller from this server can lock it out.
 # The first test collectors of collect.php (alerts, news, air, traffic, reference) are replaced by the engine in
 # aa/ (bronnen, heli, verkeer) and are paused: they only added load (adsb.lol refuses the host when asked too often).
-# The Worker mirror (worker) stays for the comparisons until the switch.
-PAUSED={x for x in os.getenv("AALERTS_CRON_PAUSED","p2000,alerts,news,air,traffic,reference").split(",") if x}
+# Since the switch (21-11-2026) the Worker only passes requests on to this server: its mirror (worker) and the D1
+# copy (d1) would read this server back, so they are paused too.
+PAUSED={x for x in os.getenv("AALERTS_CRON_PAUSED","p2000,alerts,news,air,traffic,reference,worker,d1").split(",") if x}
 for row in sorted([x for x in known if isinstance(x,dict)],key=lambda x:-int(x.get("count") or 0)):
  tag=re.search(r"# aalerts-api-([a-z0-9]+)\s*$",str(row.get("command","")))
  if not tag or tag.group(1) not in PAUSED:continue
