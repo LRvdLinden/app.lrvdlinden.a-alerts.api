@@ -18,3 +18,5 @@ alles="\n".join(pages.values())
 for k in ["/v1/afkortingen","/v1/statistiek","afbeelding.png","/plaats/{naam}","/eenheid/{capcode}","/sitemap-p2000.xml","BRT-achtergrondkaart","zonder afstandsgrens","Hectometerpalen, statistieken en deelafbeeldingen","Sinds 22 november 2026","https://a-alerts.nl/plaats/{naam}","plaats","eenheid"]:
   print("DOCS_BEVAT",repr(k),k in alles)
 for r,h in pages.items():print("ROUTEPAGINA",r,len(h)>1000)
+m=re.search(r"Hectometerpalen \(PDOK, heel Nederland\):[^<]{0,600}",alles)
+print("HM_STATUS",m.group(0) if m else None)
