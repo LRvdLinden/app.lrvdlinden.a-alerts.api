@@ -28,17 +28,20 @@ function aaRoute(string $path): void {
   }
   $path=rtrim($path,'/')?:'/';
   $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');
-  static $eigen=['/','/health','/v1/meldingen','/v1/locaties','/v1/veiligheidsregio','/v1/changelog','/v1/content/','/v1/app','/v1/posten/','/v1/waarschuwingen','/v1/nieuws'];
+  static $eigen=['/','/health','/v1/meldingen','/v1/locaties','/v1/veiligheidsregio','/v1/changelog','/v1/content/','/v1/app','/v1/posten/','/v1/waarschuwingen','/v1/nieuws','/v1/afkortingen','/v1/statistiek'];
   $hit=false; foreach($eigen as $p)if($path===$p||($p!=='/'&&str_starts_with($path,rtrim($p,'/').'/'))){$hit=true;break;}
   if(!$hit)return;
   if($method==='OPTIONS')aaReply(204,null);
   if($path==='/'||$path==='/health'){ require_once __DIR__.'/health.php'; try{ aaReply(200,aaHealth()); }catch(Throwable $e){ error_log('[aa health] '.$e->getMessage()); aaReply(500,['error'=>'Internal error']); } }
   try{
     if($method==='GET'&&$path==='/v1/meldingen')
-      aaReply(200,aaListMeldingen($_GET['limit']??null,$_GET['before']??null),['Cache-Control'=>'public, max-age=5']);
+      aaReply(200,aaListMeldingen($_GET['limit']??null,$_GET['before']??null,$_GET['plaats']??null,$_GET['eenheid']??null),['Cache-Control'=>'public, max-age=5']);
     if(preg_match('#^/v1/meldingen/([\w-]{8,64})$#',$path,$m)&&$method==='GET'){
       $item=aaGetMelding($m[1]); $item?aaReply(200,$item):aaReply(404,['error'=>'Not found']);
     }
+    if($method==='GET'&&preg_match('#^/v1/meldingen/([\w-]{8,64})/afbeelding\.png$#',$path,$m)){ require_once __DIR__.'/afbeelding.php'; aaAfbeeldingRoute($m[1],(string)($_GET['formaat']??'og')); }
+    if($method==='GET'&&$path==='/v1/afkortingen'){ require_once __DIR__.'/afkortingen.php'; aaReply(200,aaAfkortingen(),['Cache-Control'=>'public, max-age=3600']); }
+    if($method==='GET'&&$path==='/v1/statistiek'){ require_once __DIR__.'/statistiek.php'; aaReply(200,aaStatistiek($_GET['dagen']??28,$_GET['plaats']??null,$_GET['eenheid']??null),['Cache-Control'=>'public, max-age=300']); }
     if(preg_match('#^/v1/meldingen/([\w-]{8,64})/view$#',$path,$m)&&$method==='POST')aaReply(200,['views'=>aaAddView($m[1])]);
     if(preg_match('#^/v1/meldingen/([\w-]{8,64})/verloop$#',$path,$m)&&$method==='GET'){
       $item=aaGetMelding($m[1]); if(!$item)aaReply(404,['error'=>'Not found']);

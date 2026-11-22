@@ -27,15 +27,23 @@ function aaMeldingAPI(?array $row): ?array {
     'grip'=>$row['grip'],'opschaling'=>$row['opschaling'],'eenheden'=>aaParse($row['eenheden']),'voertuigen'=>aaParse($row['voertuigen']),
     'link'=>$row['link'],'views'=>(int)$row['views'],'incident'=>$row['incident']??null];
   if(str_contains((string)($row['vlaggen']??''),'groot'))$out['groot']=true;
+  $hm=aaHmPaal($row['title']??''); if($hm)$out['hm']=$hm;
   if(array_key_exists('hidden',$row)){$out['hidden']=(bool)(int)$row['hidden'];$out['edited']=(bool)(int)$row['edited'];}
   return $out;
 }
-function aaListMeldingen(mixed $limit=null, mixed $before=null): array {
+function aaListMeldingen(mixed $limit=null, mixed $before=null, mixed $plaats=null, mixed $eenheid=null): array {
   $lim=min(max((int)($limit?:300),1),1000);
-  if($before!==null&&$before!==''){
-    $q=aaDb()->prepare(AA_SELECT.' WHERE COALESCE(o.hidden, 0) = 0 AND m.datum < ? ORDER BY m.datum DESC, m.volgorde ASC LIMIT '.$lim); $q->execute([aaMs($before)??0]);
-  }else{ $q=aaDb()->query(AA_SELECT.' WHERE COALESCE(o.hidden, 0) = 0 ORDER BY m.datum DESC, m.volgorde ASC LIMIT '.$lim); }
-  return array_map('aaMeldingAPI',$q->fetchAll());
+  $w=' WHERE COALESCE(o.hidden, 0) = 0'; $arg=[];
+  if($before!==null&&$before!==''){ $w.=' AND m.datum < ?'; $arg[]=aaMs($before)??0; }
+  // ?plaats= (place of the alert, without case or dashes) and ?eenheid= (capcode of a unit): for the place and unit pages.
+  $pk=aaPlaatsKey(mb_substr((string)($plaats??''),0,60));
+  if($pk!==''){ $w.=" AND LOWER(REPLACE(m.stad,'-',' ')) = ?"; $arg[]=$pk; }
+  $code=substr((string)preg_replace('/\D/','',(string)($eenheid??'')),0,12);
+  if($code!==''){ $w.=' AND m.eenheden LIKE ?'; $arg[]='%"'.$code.'"%'; }
+  $q=aaDb()->prepare(AA_SELECT.$w.' ORDER BY m.datum DESC, m.volgorde ASC LIMIT '.$lim); $q->execute($arg);
+  $uit=array_map('aaMeldingAPI',$q->fetchAll());
+  if($code!=='')$uit=array_values(array_filter($uit,function($m)use($code){ foreach($m['eenheden']??[] as $u)if(is_array($u)&&preg_replace('/\D/','',(string)($u['code']??''))===$code)return true; return false; }));
+  return $uit;
 }
 function aaGetMelding(string $guid, bool $includeHidden=false): ?array {
   $q=aaDb()->prepare(AA_SELECT.' WHERE m.guid = ?'); $q->execute([$guid]); $row=$q->fetch();
@@ -180,22 +188,38 @@ function aaPdok(string $url): ?array {
   if($c!==200||!is_string($b))throw new RuntimeException('HTTP '.$c);
   $d=json_decode($b,true); return is_array($d)?$d:null;
 }
+/**
+ * The hectometre post in the text: "A50 Re 123,4", "A1 Li hm 45.2", "A12 HRR 34,5" and "N304 - Otterloseweg 21,0" (the
+ * form of the regional dispatch: road, dash, street name, post). The side (Re/Li, HRR/HRL) is kept for the label;
+ * PDOK has one point per post for both carriageways, so the side does not move the point.
+ */
 function aaHmPaal(mixed $tekst): ?array {
-  if(!preg_match('/(?<![\p{L}\d])([AN])\s?(\d{1,3})\s+(?:(Re|Li|R|L)\s+)?(\d{1,3})[,.](\d)(?!\d)/iu',(string)$tekst,$m))return null;
+  if(!preg_match('/(?<![\p{L}\d])([AN])\s?(\d{1,3})(?![\d,.])(?:\s*[-–]\s*[\p{L}][\p{L}\'.\- ]{1,40}?)?\s+(?:(Re|Li|R|L|HRR|HRL|HR[RL]?|rechts|links)\s+)?(?:hm\s*)?(\d{1,3})[,.](\d)(?![\d,.])/iu',(string)$tekst,$m))return null;
   $z=strtolower($m[3]??'');
-  return ['weg'=>strtoupper($m[1]).$m[2],'hm'=>(int)$m[4]*10+(int)$m[5],'zijde'=>str_starts_with($z,'r')?'Re':(str_starts_with($z,'l')?'Li':null)];
+  $zijde=in_array($z,['re','r','hrr','rechts'],true)?'Re':(in_array($z,['li','l','hrl','links'],true)?'Li':null);
+  $weg=strtoupper($m[1]).$m[2]; $hm=(int)$m[4]*10+(int)$m[5];
+  return ['weg'=>$weg,'hm'=>$hm,'zijde'=>$zijde,'tekst'=>$weg.($zijde?' '.$zijde:'').' hm '.intdiv($hm,10).','.($hm%10)];
 }
 function aaPunt(mixed $s): ?array { return preg_match('/POINT\((-?[\d.]+) (-?[\d.]+)\)/',(string)$s,$m)?[(float)$m[2],(float)$m[1]]:null; }
-function aaKiesPaal(array $docs): ?array {
-  $p=[]; foreach($docs as $d){$pt=aaPunt($d['centroide_ll']??'');if($pt&&aaDistanceKm($pt[0],$pt[1],AA_MIDDEN[0],AA_MIDDEN[1])<=60)$p[]=['letter'=>$d['hectometerletter']??'','lat'=>$pt[0],'lon'=>$pt[1]];}
+/**
+ * The post itself (no letter: the letters a–d are slip roads). A road and post number is unique in the Netherlands,
+ * so no radius around Apeldoorn any more; only a check that the point is in the Netherlands and, when the place of
+ * the alert is known, within 40 km of it (a wrong road number in the text then gives no point instead of a wrong one).
+ */
+function aaKiesPaal(array $docs, mixed $stad=null): ?array {
+  $p=[]; foreach($docs as $d){$pt=aaPunt($d['centroide_ll']??''); if(!$pt||$pt[0]<50.7||$pt[0]>53.7||$pt[1]<3.2||$pt[1]>7.3)continue; $p[]=['letter'=>$d['hectometerletter']??'','lat'=>$pt[0],'lon'=>$pt[1]];}
   $k=null; foreach($p as $x)if($x['letter']===''){$k=$x;break;} $k??=$p[0]??null;
-  return $k?[round($k['lat'],5),round($k['lon'],5)]:null;
+  if(!$k)return null;
+  $c=$stad?aaWoonplaatsCentrum($stad):null;
+  if($c&&aaDistanceKm($k['lat'],$k['lon'],(float)$c['lat'],(float)$c['lon'])>40)return null;
+  return [round($k['lat'],5),round($k['lon'],5)];
 }
 function aaKvPunt(string $key): array|false|null { $v=aaKvGet($key); if($v===null||$v==='')return false; return $v==='-'?null:array_map('floatval',explode(',',$v)); }
-function aaHmPunt(array $paal): ?array {
-  $key='hm:'.$paal['weg'].'|'.$paal['hm']; $oud=aaKvPunt($key); if($oud!==false)return $oud;
+function aaHmPunt(array $paal, mixed $stad=null): ?array {
+  // hm2: since 22-11-2026 the whole country (hm: was 60 km around Apeldoorn, so a miss there may be a hit now).
+  $key='hm2:'.$paal['weg'].'|'.$paal['hm'].'|'.aaPlaatsKey($stad); $oud=aaKvPunt($key); if($oud!==false)return $oud;
   try{ $d=aaPdok('https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q='.$paal['weg'].'&fq=type:hectometerpaal&fq=wegnummer:'.$paal['weg'].'&fq=hectometernummer:'.$paal['hm'].'&rows=10&fl=weergavenaam,centroide_ll,hectometerletter');
-    $p=aaKiesPaal($d['response']['docs']??[]); }catch(Throwable){return null;}
+    $p=aaKiesPaal($d['response']['docs']??[],$stad); }catch(Throwable){return null;}
   aaKvSet($key,$p?implode(',',$p):'-'); return $p;
 }
 function aaAlleenStraat(mixed $l): bool { $s=trim((string)($l??'')); return mb_strlen($s)>=4&&!preg_match('/\d/',$s); }
@@ -213,12 +237,19 @@ function aaStraatPunt(mixed $locatie, mixed $stad): ?array {
     $p=aaKiesStraat($d['response']['docs']??[],$straat,$plaats); }catch(Throwable){return null;}
   aaKvSet($key,$p?implode(',',$p):'-'); return $p;
 }
-function aaHmHerstel(int $max=5): int {
-  $q=aaDb()->prepare("SELECT guid, title, lat, lon FROM meldingen WHERE datum > ? AND (title REGEXP 'A[0-9].*[0-9][,.][0-9]' OR title REGEXP 'N[0-9].*[0-9][,.][0-9]') ORDER BY datum DESC LIMIT 40");
-  $q->execute([aaNow()-48*3600000]); $n=0; $u=aaDb()->prepare('UPDATE meldingen SET lat = ?, lon = ? WHERE guid = ?');
-  foreach($q->fetchAll() as $r){ if($n>=$max)break; $paal=aaHmPaal($r['title']); if(!$paal)continue; $p=aaHmPunt($paal);
+function aaHmHerstel(int $max=5, int $uren=48, int $rijen=40): int {
+  $q=aaDb()->prepare("SELECT guid, title, stad, lat, lon FROM meldingen WHERE datum > ? AND (title REGEXP 'A[0-9].*[0-9][,.][0-9]' OR title REGEXP 'N[0-9].*[0-9][,.][0-9]') ORDER BY datum DESC LIMIT ".(int)$rijen);
+  $q->execute([aaNow()-$uren*3600000]); $n=0; $u=aaDb()->prepare('UPDATE meldingen SET lat = ?, lon = ? WHERE guid = ?');
+  foreach($q->fetchAll() as $r){ if($n>=$max)break; $paal=aaHmPaal($r['title']); if(!$paal)continue; $p=aaHmPunt($paal,$r['stad']);
     if(!$p||((float)$r['lat']===$p[0]&&(float)$r['lon']===$p[1]))continue; $u->execute([$p[0],$p[1],$r['guid']]); $n++; }
   return $n;
+}
+/** Count for the check: alerts of the last $dagen days with a hectometre post in the text, and how many of them have a point on that post. */
+function aaHmTelling(int $dagen): array {
+  $q=aaDb()->prepare("SELECT title, stad, lat, lon FROM meldingen WHERE datum > ? AND (title REGEXP '[AN] ?[0-9]+.*[0-9][,.][0-9]')"); $q->execute([aaNow()-$dagen*86400000]);
+  $met=0; $plek=0; foreach($q->fetchAll() as $r){ $p=aaHmPaal($r['title']); if(!$p)continue; $met++; $pt=aaKvPunt('hm2:'.$p['weg'].'|'.$p['hm'].'|'.aaPlaatsKey($r['stad']));
+    if(is_array($pt)&&$r['lat']!==null&&abs((float)$r['lat']-$pt[0])<1e-4&&abs((float)$r['lon']-$pt[1])<1e-4)$plek++; }
+  return ['met_paal'=>$met,'op_paal'=>$plek];
 }
 function aaStraatHerstel(int $max=6): int {
   $q=aaDb()->prepare("SELECT guid, title, locatie, stad, lat, lon FROM meldingen WHERE datum > ? AND locatie IS NOT NULL AND locatie != '' AND locatie NOT REGEXP '[0-9]' AND (vlaggen IS NULL OR vlaggen NOT LIKE '%kruising%') ORDER BY datum DESC LIMIT 30");
@@ -284,7 +315,7 @@ function aaIngestParsed(array $parsed, int $budget=45): array {
   }
   $fresh=$unique;
   foreach($fresh as &$m){
-    $paal=aaHmPaal($m['title']); $hp=$paal&&$budget-->20?aaHmPunt($paal):null;
+    $paal=aaHmPaal($m['title']); $hp=$paal&&$budget-->20?aaHmPunt($paal,$m['stad']??null):null;
     if($hp){[$m['lat'],$m['lon']]=$hp;continue;}
     if(str_contains((string)($m['vlaggen']??''),'kruising')&&($m['lat']??null)!==null)continue;
     $sp=!empty($m['locatie'])&&$budget-->20?aaStraatPunt($m['locatie'],$m['stad']):null;
@@ -302,6 +333,9 @@ function aaIngestParsed(array $parsed, int $budget=45): array {
   $last=(int)(aaKvGet('aa_herstel_at')??0);
   if($added||aaNow()-$last>15*60000){
     aaKvSet('aa_herstel_at',(string)aaNow());
+    // Once: the alerts of the last 30 days with a hectometre post get a place again (wider search since 22-11-2026).
+    if(aaKvGet('hm_herstel_30d')===null){ try{ $voor=aaHmTelling(30); $n=aaHmHerstel(400,30*24,2000); $na=aaHmTelling(30);
+      aaKvSet('hm_herstel_30d',aaJson(['at'=>aaIso(aaNow()),'bijgewerkt'=>$n,'voor'=>$voor,'na'=>$na])); }catch(Throwable $e){ error_log('[aa hm30] '.$e->getMessage()); } }
     foreach(['aaHmHerstel','aaStraatHerstel','aaCategorieHerstel','aaIncidentHerstel'] as $f){try{$f();}catch(Throwable $e){error_log('[aa '.$f.'] '.$e->getMessage());}}
   }
   return $added;
