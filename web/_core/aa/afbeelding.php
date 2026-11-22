@@ -10,7 +10,7 @@ declare(strict_types=1);
  */
 require_once __DIR__ . '/meldingen.php';
 
-const AA_BEELD_VERSIE = 1;
+const AA_BEELD_VERSIE = 2;
 const AA_BEELD_FORMATEN = ['og' => [1200, 630], 'vierkant' => [1080, 1350], 'staand' => [1080, 1920]];
 const AA_BEELD_KLEUR = ['brandweer' => [227, 6, 19], 'ambulance' => [244, 196, 0], 'politie' => [21, 66, 139], 'traumaheli' => [147, 51, 234], 'lifeliner' => [147, 51, 234]];
 const AA_BEELD_NAAM = ['brandweer' => 'Brandweer', 'ambulance' => 'Ambulance', 'politie' => 'Politie', 'traumaheli' => 'Traumaheli', 'lifeliner' => 'Traumaheli'];
@@ -135,13 +135,15 @@ function aaAfbeeldingMaak(array $m, string $formaat): string {
   $bold = aaBeeldFont('Bold'); $med = aaBeeldFont('Medium'); $reg = aaBeeldFont('Regular');
 
   // Map area.
-  $heeftPlek = ($m['lat'] ?? null) !== null && ($m['lon'] ?? null) !== null && empty($m['plaatscentrum']);
+  // With only the centre of the place (most ambulance alerts): a map of the place with a circle, never a pin.
+  $heeftPlek = ($m['lat'] ?? null) !== null && ($m['lon'] ?? null) !== null;
+  $centrum = !empty($m['plaatscentrum']);
   $ambu = $dienst === 'ambulance';
-  $z = !empty($m['hm']) ? 14 : ($ambu ? 13 : 15);
+  $z = !empty($m['hm']) ? 14 : ($centrum ? 12 : ($ambu ? 13 : 15));
   if ($formaat === 'og') { $kaartVak = [$W - 520, 0, 520, $H]; $tekstBreed = $W - 520 - 2 * (int)(56 * $s); }
   elseif ($formaat === 'vierkant') { $kaartVak = [0, (int)($H * 0.52), $W, $H - (int)($H * 0.52) - (int)(110 * $s)]; $tekstBreed = $W - 2 * (int)(64 * $s); }
   else { $kaartVak = [0, (int)($H * 0.46), $W, (int)($H * 0.40)]; $tekstBreed = $W - 2 * (int)(64 * $s); }
-  $kaart = $heeftPlek ? aaBeeldKaart((float)$m['lat'], (float)$m['lon'], $z, $kaartVak[2], $kaartVak[3], $kleur, !$ambu) : null;
+  $kaart = $heeftPlek ? aaBeeldKaart((float)$m['lat'], (float)$m['lon'], $z, $kaartVak[2], $kaartVak[3], $kleur, !$ambu && !$centrum) : null;
   if ($kaart) {
     imagecopy($im, $kaart, $kaartVak[0], $kaartVak[1], 0, 0, $kaartVak[2], $kaartVak[3]);
     // Attribution on the map, as PDOK asks.
@@ -151,8 +153,7 @@ function aaAfbeeldingMaak(array $m, string $formaat): string {
     imagefilledrectangle($im, $bx - 8, $by - (int)$f - 8, $bx + $bw + 8, $by + 6, imagecolorallocatealpha($im, 255, 255, 255, 30));
     imagettftext($im, $f, 0, $bx, $by, $grijs, $reg, $txt);
   } else {
-    $tekstBreed = $formaat === 'og' ? $W - 2 * (int)(56 * $s) : $tekstBreed;
-    if ($formaat !== 'og') {
+    {
       // No map: a light panel in the service colour with its icon (decoration, clearly not a map).
       [$kx, $ky, $kw, $kh] = $kaartVak;
       imagefilledrectangle($im, $kx, $ky, $kx + $kw, $ky + $kh, imagecolorallocate($im, (int)(255 - (255 - $kleur[0]) * 0.12), (int)(255 - (255 - $kleur[1]) * 0.12), (int)(255 - (255 - $kleur[2]) * 0.12)));
@@ -165,7 +166,7 @@ function aaAfbeeldingMaak(array $m, string $formaat): string {
   // Service band at the top.
   $pad = (int)(($formaat === 'og' ? 56 : 64) * $s);
   $band = (int)(14 * $s);
-  imagefilledrectangle($im, 0, 0, $formaat === 'og' && $kaart ? $W - 520 : $W, $band, $dkleur);
+  imagefilledrectangle($im, 0, 0, $formaat === 'og' ? $W - 520 : $W, $band, $dkleur);
   $y = $band + (int)(58 * $s);
   $iconPad = __DIR__ . '/beeld/icon_' . ($dienst === 'lifeliner' ? 'traumaheli' : $dienst) . '.png';
   $x = $pad;
@@ -207,7 +208,7 @@ function aaAfbeeldingMaak(array $m, string $formaat): string {
   // Brand at the bottom.
   $voetY = $formaat === 'og' ? $H - (int)(48 * $s) : $H - (int)(48 * $s);
   if ($formaat !== 'og') imagefilledrectangle($im, 0, $H - (int)(110 * $s), $W, $H, $wit);
-  imageline($im, $pad, $voetY - (int)(52 * $s), ($formaat === 'og' && $kaart ? $W - 520 : $W) - $pad, $voetY - (int)(52 * $s), $lijn);
+  imageline($im, $pad, $voetY - (int)(52 * $s), ($formaat === 'og' ? $W - 520 : $W) - $pad, $voetY - (int)(52 * $s), $lijn);
   $lx = $pad;
   if (($logo = @imagecreatefrompng(__DIR__ . '/beeld/aalerts-icon-180.png'))) {
     $ls = (int)(40 * $s); imagecopyresampled($im, $logo, $lx, $voetY - (int)(32 * $s), 0, 0, $ls, $ls, imagesx($logo), imagesy($logo)); $lx += $ls + (int)(14 * $s);
