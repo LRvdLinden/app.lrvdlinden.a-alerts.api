@@ -449,6 +449,7 @@ if(PHP_SAPI==='cli'&&realpath($_SERVER['SCRIPT_FILENAME']??'')===realpath(__FILE
     $rapport=['modus'=>$modus,'at'=>aaIso(aaNow()),'at_ms'=>aaNow(),'duur_s'=>round((aaNow()-$now)/1000,1),'pushes_klaar'=>count($toPush),'nieuws_nieuw'=>count($nieuws)]+AaProef::$rapport;
     aaKvSet($modus==='proef'?'aa_bronnen_proef':'aa_bronnen',aaJsJson($rapport));
     if($modus!=='proef'){ try{ require_once __DIR__.'/homey.php'; aaNotifyHomey(); }catch(Throwable $e){ error_log('[aa homey] '.$e->getMessage()); } }
+    if($modus!=='proef')aaHmEenmalig();
     echo 'bronnen '.$modus.' '.json_encode($rapport['_status']??[])."\n";
   }catch(Throwable $e){ error_log('[aa bronnen] '.$e->getMessage()); fwrite(STDERR,'bronnen '.get_class($e)."\n"); exit(1); }
 }

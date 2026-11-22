@@ -268,6 +268,16 @@ function aaHmTelling(int $dagen): array {
     if($r['lat']!==null&&abs((float)$r['lat']-$pt[0])<1e-4&&abs((float)$r['lon']-$pt[1])<1e-4)$opPaal++; }
   return ['met_paal'=>$met,'met_plek'=>$plek,'paal_gevonden'=>$vindbaar,'op_paal'=>$opPaal];
 }
+/**
+ * Once: the alerts of the last 30 days with a hectometre post get a place again (whole country since 22-11-2026),
+ * measured before and after (kv hm_herstel_30d_v2). Called from the intake and from the cron bronnen, so it also runs
+ * on a quiet night.
+ */
+function aaHmEenmalig(): void {
+  if(aaKvGet('hm_herstel_30d_v2')!==null)return;
+  try{ $voor=aaHmTelling(30); $n=aaHmHerstel(400,30*24,2000); $na=aaHmTelling(30);
+    aaKvSet('hm_herstel_30d_v2',aaJson(['at'=>aaIso(aaNow()),'bijgewerkt'=>$n,'voor'=>$voor,'na'=>$na])); }catch(Throwable $e){ error_log('[aa hm30] '.$e->getMessage()); }
+}
 function aaStraatHerstel(int $max=6): int {
   $q=aaDb()->prepare("SELECT guid, title, locatie, stad, lat, lon FROM meldingen WHERE datum > ? AND locatie IS NOT NULL AND locatie != '' AND locatie NOT REGEXP '[0-9]' AND (vlaggen IS NULL OR vlaggen NOT LIKE '%kruising%') ORDER BY datum DESC LIMIT 30");
   $q->execute([aaNow()-6*3600000]); $n=0; $u=aaDb()->prepare('UPDATE meldingen SET lat = ?, lon = ? WHERE guid = ?');
@@ -350,9 +360,7 @@ function aaIngestParsed(array $parsed, int $budget=45): array {
   $last=(int)(aaKvGet('aa_herstel_at')??0);
   if($added||aaNow()-$last>15*60000){
     aaKvSet('aa_herstel_at',(string)aaNow());
-    // Once: the alerts of the last 30 days with a hectometre post get a place again (wider search since 22-11-2026).
-    if(aaKvGet('hm_herstel_30d_v2')===null){ try{ $voor=aaHmTelling(30); $n=aaHmHerstel(400,30*24,2000); $na=aaHmTelling(30);
-      aaKvSet('hm_herstel_30d_v2',aaJson(['at'=>aaIso(aaNow()),'bijgewerkt'=>$n,'voor'=>$voor,'na'=>$na])); }catch(Throwable $e){ error_log('[aa hm30] '.$e->getMessage()); } }
+    aaHmEenmalig();
     foreach(['aaHmHerstel','aaStraatHerstel','aaCategorieHerstel','aaIncidentHerstel'] as $f){try{$f();}catch(Throwable $e){error_log('[aa '.$f.'] '.$e->getMessage());}}
   }
   return $added;
