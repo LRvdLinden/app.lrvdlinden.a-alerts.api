@@ -45,6 +45,7 @@ print("EIGEN http",code,json.dumps({k:data.get(k) for k in ("tabellen","d1_overn
 print("HOMEY",json.dumps(((data or {}).get("p2000") or {}).get("homey") if isinstance(data,dict) else None))
 print("JET",json.dumps(((data or {}).get("p2000") or {}).get("jet") if isinstance(data,dict) else None))
 print("ADSB",json.dumps({"bronnen":data.get("adsb_bronnen"),"laatste":data.get("adsb_laatste_opvraag"),"fout":data.get("adsb_laatste_fout")} if isinstance(data,dict) else None))
+print("HM",json.dumps(data.get("hm_herstel") if isinstance(data,dict) else None))
 print("PUSH",json.dumps(((data or {}).get("p2000") or {}).get("push") if isinstance(data,dict) else None,ensure_ascii=False))
 code,data=live("GET /v1/spiegel")
 print("SPIEGEL http",code)
