@@ -8,6 +8,7 @@ declare(strict_types=1);
 require_once __DIR__.'/meldingen.php';
 
 const AA_STAT_TTL = 900000;
+const AA_STAT_VERSIE = 2;
 
 /** Same rule as aaIsTestOproep (push.php), plus drills ("oefening"): never in the figures. */
 function aaStatTelNiet(array $r): bool {
@@ -22,7 +23,7 @@ function aaStatistiek(mixed $dagen = 28, mixed $plaats = null, mixed $eenheid = 
   $dagen = max(1, min(90, (int)($dagen ?: 28)));
   $plaats = trim(mb_substr((string)($plaats ?? ''), 0, 60));
   $code = aaStatCode($eenheid);
-  $key = 'stat:' . $dagen . '|' . aaPlaatsKey($plaats) . '|' . $code;
+  $key = 'stat:' . AA_STAT_VERSIE . ':' . $dagen . '|' . aaPlaatsKey($plaats) . '|' . $code;
   $oud = aaParse(aaKvGet($key), null);
   if (is_array($oud) && aaNow() - (int)($oud['_at'] ?? 0) < AA_STAT_TTL) { unset($oud['_at']); return $oud; }
   $uit = aaStatistiekReken($dagen, $plaats, $code);
@@ -80,10 +81,12 @@ function aaStatistiekReken(int $dagen, string $plaats, string $code): array {
   }
   $sorteer = function (array $a): array { usort($a, fn($x, $y) => $y['aantal'] <=> $x['aantal'] ?: strcmp((string)reset($x), (string)reset($y))); return array_slice($a, 0, 10); };
   arsort($perDienst); ksort($perPrio);
-  $eerdere = array_values(array_filter($perDag, fn($d) => $d['datum'] < $vandaag->format('Y-m-d')));
+  // Average per whole day, only over days for which alerts are stored (not the days before the first one).
+  $eerste = (int)(aaDb()->query('SELECT MIN(datum) FROM meldingen')->fetchColumn() ?: 0);
+  $eersteDag = $eerste ? (new DateTimeImmutable('@' . intdiv($eerste, 1000)))->setTimezone($tz)->format('Y-m-d') : '';
+  $eerdere = array_values(array_filter($perDag, fn($d) => $d['datum'] < $vandaag->format('Y-m-d') && $d['datum'] > $eersteDag));
   $gem = $eerdere ? array_sum(array_column($eerdere, 'totaal')) / count($eerdere) : 0.0;
   $heliLijst = []; arsort($heli); foreach ($heli as $n => $a) $heliLijst[] = ['naam' => $n, 'aantal' => $a];
-  $eerste = (int)(aaDb()->query('SELECT MIN(datum) FROM meldingen')->fetchColumn() ?: 0);
   return [
     'bijgewerkt' => aaIso(aaNow()), 'dagen' => $dagen,
     'plaats' => $plaats !== '' ? $plaats : null, 'eenheid' => $code !== '' ? $code : null,
