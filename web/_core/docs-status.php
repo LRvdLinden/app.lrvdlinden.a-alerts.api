@@ -145,13 +145,13 @@ function docsLiveState(): array {
     'detail'=>$viaTekst.($perBron?'Bronnen: '.implode(' · ',$perBron).'. ':'').'adsb.fi, airplanes.live en adsb.lol (hoogstens 400 opvragen per dag, verspreid over de dag) wisselen elkaar af; een bron die weigert rust even. Reserve: OpenSky Network en de eigen Koyeb-dienst. Laatste vastgelegde positie: '.docsAgo($heliPos?:null).'.'
       .(is_array($fout)&&$foutAt&&(!$viaOk||$foutAt>($viaAt??0))?' Laatste fout: '.(string)($fout['fout']??'').' ('.docsAgo($foutAt).').':'')];
   // --- hectometre posts, figures and share images (22-11-2026)
-  $hm30=json_decode((string)(docsKv($db,'hm_herstel_30d')??''),true);
-  $hmN=0; $statN=0; try{ $hmN=(int)$db->query("SELECT COUNT(*) FROM kv WHERE `key` LIKE 'hm2:%'")->fetchColumn(); $statN=(int)$db->query("SELECT COUNT(*) FROM kv WHERE `key` LIKE 'stat:%'")->fetchColumn(); }catch(Throwable){}
+  $hm30=json_decode((string)(docsKv($db,'hm_herstel_30d_v2')??''),true);
+  $hmN=0; $statN=0; try{ $hmN=(int)$db->query("SELECT COUNT(*) FROM kv WHERE `key` LIKE 'hm3:%'")->fetchColumn(); $statN=(int)$db->query("SELECT COUNT(*) FROM kv WHERE `key` LIKE 'stat:%'")->fetchColumn(); }catch(Throwable){}
   $beelden=count(glob(__DIR__.'/cache/beeld-*.png')?:[]); $tegels=count(glob(__DIR__.'/cache/tegel-*.png')?:[]);
   $out['bronnen'][]=['id'=>'hm','naam'=>'Hectometerpalen, statistieken en deelafbeeldingen','icoon'=>'/images/website/marker_brandweer.png',
     'staat'=>'live','laatst'=>is_array($hm30)?docsMsOf($hm30['at']??null):null,
     'detail'=>'Hectometerpalen (PDOK, heel Nederland): '.$hmN.' palen opgezocht en bewaard.'
-      .(is_array($hm30)?' Eenmalige herplaatsing van 30 dagen op '.date('j-n H:i',(int)((docsMsOf($hm30['at']??null)??0)/1000)).': '.(int)($hm30['bijgewerkt']??0).' meldingen bijgewerkt; met paal '.(int)($hm30['voor']['met_paal']??0).', op de paal voor '.(int)($hm30['voor']['op_paal']??0).' en na '.(int)($hm30['na']['op_paal']??0).'.':' Herplaatsing van 30 dagen volgt bij de volgende inname.')
+      .(is_array($hm30)?' Eenmalige herplaatsing van 30 dagen op '.date('j-n H:i',(int)((docsMsOf($hm30['at']??null)??0)/1000)).': '.(int)($hm30['bijgewerkt']??0).' meldingen bijgewerkt; '.(int)($hm30['voor']['met_paal']??0).' met een paal in de tekst, waarvan '.(int)($hm30['voor']['paal_gevonden']??0).' eenduidig bij PDOK; op de paal vóór '.(int)($hm30['voor']['op_paal']??0).', na '.(int)($hm30['na']['op_paal']??0).'.':' Herplaatsing van 30 dagen volgt bij de volgende inname.')
       .' Statistieken: '.$statN.' vragen in de cache (15 minuten). Deelafbeeldingen: '.$beelden.' in de cache (14 dagen), '.$tegels.' kaarttegels van PDOK BRT (30 dagen).'];
   // --- traffic
   $vk=docsKvAt($db,'verkeer');
