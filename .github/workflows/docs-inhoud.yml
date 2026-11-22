@@ -1,0 +1,16 @@
+name: Docs-inhoud controleren
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inhoud:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inloggen en nieuwe routes zoeken (alleen ja/nee)
+        env:
+          AALERTS_DOCS_USERNAME: ${{ secrets.AALERTS_DOCS_USERNAME }}
+          AALERTS_DOCS_PASSWORD: ${{ secrets.AALERTS_DOCS_PASSWORD }}
+        run: python3 tools/docs_inhoud_check.py
