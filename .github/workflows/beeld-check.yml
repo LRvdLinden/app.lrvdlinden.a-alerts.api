@@ -1,0 +1,31 @@
+name: Deelafbeelding en webpagina's controleren
+on:
+  workflow_dispatch:
+    inputs:
+      guids:
+        description: "guids, met spaties"
+        required: true
+permissions:
+  contents: read
+jobs:
+  beeld:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Afbeeldingen en pagina's ophalen
+        env:
+          GUIDS: ${{ inputs.guids }}
+        run: |
+          mkdir -p uit
+          for g in $GUIDS; do
+            case "$g" in *[!A-Za-z0-9_-]*) echo "ongeldige guid"; exit 1;; esac
+            for f in og vierkant staand; do curl -fsS --max-time 40 -o "uit/$g-$f.png" "https://api.a-alerts.nl/v1/meldingen/$g/afbeelding.png?formaat=$f" || echo "FOUT $g $f"; done
+            curl -sS --max-time 40 -o "uit/$g.html" -w "PAGINA $g %{http_code}\n" "https://a-alerts.nl/melding/x/$g"
+          done
+          for p in statistieken afkortingen plaats/ugchelen eenheid/0804523 sitemap-p2000.xml; do curl -sS --max-time 40 -o "uit/$(echo $p | tr / _).html" -w "PAGINA $p %{http_code}\n" "https://a-alerts.nl/$p"; done
+          ls -la uit
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beelden
+          path: uit
+          retention-days: 2
