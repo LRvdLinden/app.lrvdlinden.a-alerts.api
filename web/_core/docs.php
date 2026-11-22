@@ -153,7 +153,7 @@ function docsRenderPage(array $routes,array $groups,array $selected,string $csrf
  echo '</nav></aside><main class="main"><div class="topbar"><div class="topbar-leading"><a href="#docs-nav" class="mobile-nav-link" aria-label="Ga naar endpointnavigatie">☰ <span>Endpoints</span></a><span><span class="status-dot"></span> API-v1 <span class="crumb">/ Documentatie</span></span></div>';
  echo '<form method="post" action="/docs/logout"><input type="hidden" name="csrf" value="'.docsSafe($csrf).'"><button class="logout">Uitloggen ↗</button></form></div>';
  echo '<div class="body-content"><p class="eyebrow">A-ALERTS / API REFERENCE</p><h1>Developer Documentation<span class="red-period">.</span></h1>';
- echo '<p class="intro">De eigen A-Alerts API op api.a-alerts.nl, los van Cloudflare. Hier zie je live wat er al zelfstandig draait, wat er binnenkomt en per route of hij in de eigen motor zit. Sinds 21 november 2026 is dit de enige server: de oude Worker op workers.dev geeft alleen nog verzoeken van oude appversies door naar hier.</p>';
+ echo '<p class="intro">De eigen A-Alerts API op api.a-alerts.nl, los van Cloudflare. Hier zie je live wat er al zelfstandig draait, wat er binnenkomt en per route of hij in de eigen motor zit. Sinds 21 november 2026 is dit de enige server: de oude Worker op workers.dev geeft alleen nog verzoeken van oude appversies door naar hier. Sinds 22 november 2026 ook: hectometerpalen in heel Nederland (veld hm), statistieken (/v1/statistiek), afkortingen (/v1/afkortingen), meldingen per plaats of eenheid en een deelafbeelding per melding. De pagina\'s van a-alerts.nl (/melding, /plaats, /eenheid, /post, /statistieken, /afkortingen en /sitemap-p2000.xml) worden op a-alerts.nl in PHP gemaakt uit deze openbare routes, met de inhoud direct in de HTML; ambulancemeldingen staan niet in Google (noindex, niet in de sitemap) en in lijsten zonder straat of huisnummer.</p>';
  $inEngine=count(array_filter($routes,'docsRouteInEngine'));
  echo '<div class="overview-stats"><div><strong>'.count($routes).'</strong><span>Routes in totaal</span></div><div><strong>'.$inEngine.'</strong><span>In de eigen motor</span></div><div><strong>'.(count($routes)-$inEngine).'</strong><span>Nog te bouwen</span></div></div>';
  if($overview){docsRenderLiveStatus($routes);docsRenderOverview($sources);}
@@ -165,7 +165,7 @@ function docsRenderPage(array $routes,array $groups,array $selected,string $csrf
  echo '<h2>'.docsSafe($selected['title']).'</h2><p class="endpoint-desc">'.docsSafe($selected['description']).'</p>';
  docsRenderEndpointSources($selected,$sources);
  docsRenderLiveViewer($selected,$csrf,$live);
- echo '<div class="path-bar"><code>'.docsSafe($selected['method'].' https://api.a-alerts.nl'.$selected['path']).'</code></div>';
+ echo '<div class="path-bar"><code>'.docsSafe($selected['method'].' '.($selected['host']??'https://api.a-alerts.nl').$selected['path']).'</code></div>';
  $private=docsRoutePrivate($selected);
  echo '<section class="section"><h3>Authenticatie</h3><p>'.($private?'Deze route vereist <code>Authorization: Bearer &lt;API_TOKEN&gt;</code>'.(str_starts_with($selected['path'],'/v1/beheer/')?' met beheerrechten':'').'.':'Openbare route, net als op workers.dev: geen token nodig.').' De docs-login is een apart account en geeft zelf geen API-toegang.</p></section>';
  if(!empty($selected['query'])){echo '<section class="section"><h3>Queryparameters</h3><table><thead><tr><th>Naam</th><th>Betekenis</th></tr></thead><tbody>';
@@ -173,7 +173,7 @@ function docsRenderPage(array $routes,array $groups,array $selected,string $csrf
  echo '</tbody></table></section>';}
  $samplePath=preg_replace('/\{[^}]+\}/','voorbeeld-id',$selected['path']);
  $method=$selected['method'];$query=empty($selected['query'])?'':'?limit=20';
- $curl="curl -i -X ".$method." \\\n".($private?"  -H 'Authorization: Bearer <API_TOKEN>' \\\n":'')."  -H 'Accept: application/json' \\\n  'https://api.a-alerts.nl".$samplePath.$query."'";
+ $curl="curl -i -X ".$method." \\\n".($private?"  -H 'Authorization: Bearer <API_TOKEN>' \\\n":'')."  -H 'Accept: ".(isset($selected['host'])?'text/html':'application/json')."' \\\n  '".($selected['host']??'https://api.a-alerts.nl').$samplePath.$query."'";
  echo '<section class="section"><h3>Voorbeeldrequest</h3><pre><code>'.docsSafe($curl).'</code></pre></section>';
  $example=$selected['example']??['error'=>$selected['status']==='planned'?'feature_not_yet_available':'example_response','note'=>'Illustratief; contract nog niet gevalideerd'];
  echo '<section class="section"><h3>Voorbeeldresponse</h3><pre><code>'.docsSafe(json_encode($example,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)).'</code></pre></section>';

@@ -37,6 +37,8 @@ function docsRouteInEngine(array $route): bool {
   if($files===null){ $files=[]; foreach(glob(__DIR__.'/aa/routes*.php')?:[] as $f)$files[]=str_replace('\\','',(string)file_get_contents($f)); }
   // The own API routes of this server (status, sources, comparison, mirror) live in private-api.php.
   if(($route['group']??'')==='Eigen API'&&($route['status']??'')==='supported')return true;
+  // Pages of a-alerts.nl (website/p): made there in PHP from the public routes of this server.
+  if(($route['group']??'')==='Website')return true;
   $parts=array_values(array_filter(preg_split('/\{[^}]+\}/',(string)$route['path']),fn($p)=>$p!==''&&$p!=='/'));
   // Root route "/": no literal part, so look for its exact path check.
   if(!$parts){ foreach($files as $code)if(str_contains($code,"\$path==='".(string)$route['path']."'"))return true; return false; }
@@ -142,6 +144,15 @@ function docsLiveState(): array {
     'staat'=>$lucht&&$viaOk&&$viaAt&&$now-$viaAt<180000?'live':($lucht&&$viaAt&&$now-$viaAt<180000?'fout':($lucht?'deels':'gepland')),'laatst'=>$viaAt?:($lucht?(max($snap??0,$heliPos)?:null):null),
     'detail'=>$viaTekst.($perBron?'Bronnen: '.implode(' · ',$perBron).'. ':'').'adsb.fi, airplanes.live en adsb.lol (hoogstens 400 opvragen per dag, verspreid over de dag) wisselen elkaar af; een bron die weigert rust even. Reserve: OpenSky Network en de eigen Koyeb-dienst. Laatste vastgelegde positie: '.docsAgo($heliPos?:null).'.'
       .(is_array($fout)&&$foutAt&&(!$viaOk||$foutAt>($viaAt??0))?' Laatste fout: '.(string)($fout['fout']??'').' ('.docsAgo($foutAt).').':'')];
+  // --- hectometre posts, figures and share images (22-11-2026)
+  $hm30=json_decode((string)(docsKv($db,'hm_herstel_30d')??''),true);
+  $hmN=0; $statN=0; try{ $hmN=(int)$db->query("SELECT COUNT(*) FROM kv WHERE `key` LIKE 'hm2:%'")->fetchColumn(); $statN=(int)$db->query("SELECT COUNT(*) FROM kv WHERE `key` LIKE 'stat:%'")->fetchColumn(); }catch(Throwable){}
+  $beelden=count(glob(__DIR__.'/cache/beeld-*.png')?:[]); $tegels=count(glob(__DIR__.'/cache/tegel-*.png')?:[]);
+  $out['bronnen'][]=['id'=>'hm','naam'=>'Hectometerpalen, statistieken en deelafbeeldingen','icoon'=>'/images/website/marker_brandweer.png',
+    'staat'=>'live','laatst'=>is_array($hm30)?docsMsOf($hm30['at']??null):null,
+    'detail'=>'Hectometerpalen (PDOK, heel Nederland): '.$hmN.' palen opgezocht en bewaard.'
+      .(is_array($hm30)?' Eenmalige herplaatsing van 30 dagen op '.date('j-n H:i',(int)((docsMsOf($hm30['at']??null)??0)/1000)).': '.(int)($hm30['bijgewerkt']??0).' meldingen bijgewerkt; met paal '.(int)($hm30['voor']['met_paal']??0).', op de paal voor '.(int)($hm30['voor']['op_paal']??0).' en na '.(int)($hm30['na']['op_paal']??0).'.':' Herplaatsing van 30 dagen volgt bij de volgende inname.')
+      .' Statistieken: '.$statN.' vragen in de cache (15 minuten). Deelafbeeldingen: '.$beelden.' in de cache (14 dagen), '.$tegels.' kaarttegels van PDOK BRT (30 dagen).'];
   // --- traffic
   $vk=docsKvAt($db,'verkeer');
   $out['bronnen'][]=['id'=>'verkeer','naam'=>'Verkeer (NDW, flitsers, werkzaamheden)','icoon'=>'/images/website/verkeer_file.png',
