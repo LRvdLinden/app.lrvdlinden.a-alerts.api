@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Deploy ONLY ./web to cPanel-verified api.a-alerts.nl via HTTPS UAPI Fileman."""
-import json,os,re,ssl,sys,uuid,urllib.request,urllib.parse,pathlib
+import json,os,re,ssl,sys,uuid,urllib.request,urllib.error,urllib.parse,pathlib
 USER=os.getenv("VIMEXX_CPANEL_USERNAME","")
 TOKEN=os.getenv("VIMEXX_CPANEL_API_TOKEN","")
 if not USER or not TOKEN:raise SystemExit("missing cPanel secrets")
@@ -12,7 +12,12 @@ def api(url,body=None,ctype=None):
  hdr={"Authorization":AUTH,"Accept":"application/json"}
  if ctype:hdr["Content-Type"]=ctype
  req=urllib.request.Request(url,headers=hdr,data=body,method="POST" if body else "GET")
- with urllib.request.urlopen(req,context=ssl.create_default_context(),timeout=35) as resp: obj=json.load(resp)
+ try:
+  with urllib.request.urlopen(req,context=ssl.create_default_context(),timeout=35) as resp: obj=json.load(resp)
+ except urllib.error.HTTPError as e:
+  # Show why cPanel refuses (never the token): status, server and the first part of the answer.
+  print("CPANEL_HTTP",e.code,e.reason,"server=",e.headers.get("Server"),"body=",(e.read() or b"")[:400].decode("utf-8","replace").replace(TOKEN,"***"),file=sys.stderr)
+  raise
  d=obj.get("result",obj)
  if d.get("status")==0 or d.get("errors"):raise RuntimeError("cPanel operation returned failure")
  return d.get("data")
