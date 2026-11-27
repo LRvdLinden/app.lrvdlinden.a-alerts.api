@@ -13,7 +13,7 @@ function aaReply(int $status, mixed $body, array $extra=[]): never {
   http_response_code($status);
   header('Content-Type: application/json; charset=utf-8');
   header('Access-Control-Allow-Origin: *');
-  header('Access-Control-Allow-Headers: content-type, authorization');
+  header('Access-Control-Allow-Headers: content-type, authorization, x-aalerts-token');
   header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
   header('X-AAlerts-Bron: eigen');
   foreach($extra as $k=>$v)header($k.': '.$v);

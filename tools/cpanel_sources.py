@@ -25,7 +25,7 @@ names=["P2000_PAGE_API_URL","VERKEER_URL","VERKEER_TOKEN","ADSB_LOL_API_KEY","P2
  # Same names as the secrets of the Cloudflare Worker, so the engine needs no translation.
  "APN_TEAM_ID","APN_KEY_ID","APN_P8_CERT","LRBEHEER_TOPIC","FCM_SERVICE_ACCOUNT","BEHEER_USER","BEHEER_PASSWORD",
  "WEB_WEATHERKIT_TEAM_ID","WEB_WEATHERKIT_KEY_ID","WEB_WEATHERKIT_P8","WEB_MAPKIT_JS_TEAM_ID","WEB_MAPKIT_JS_KEY_ID","WEB_MAPKIT_JS_P8",
- "MAPS_SERVER_API_TEAM_ID","MAPS_SERVER_API_KEY_ID","MAPS_SERVER_API_P8","KNMI_WMS_KEY","HOMEY_WEBHOOK_ID","SITE_ORIGINS","STATUS_WEB_URL"]
+ "MAPS_SERVER_API_TEAM_ID","MAPS_SERVER_API_KEY_ID","MAPS_SERVER_API_P8","KNMI_WMS_KEY","HOMEY_WEBHOOK_ID","SITE_ORIGINS","STATUS_WEB_URL","AALERTS_KEY","TOKEN_VERPLICHT"]
 data={key:os.getenv(key,"").strip() for key in names}
 # Never include unconfigured secrets as an empty override of the main config.
 data={key:value for key,value in data.items() if value}

@@ -32,7 +32,7 @@ function aaRouteApple(string $path): void {
       $t=aaMapkitToken((string)($_SERVER['HTTP_ORIGIN']??''));
       if(!$t)aaReply(aaMapkitConfigured()?403:503,['error'=>'MapKit JS unavailable']);
       http_response_code(200); header('Content-Type: text/plain'); header('Cache-Control: no-store'); header('Access-Control-Allow-Origin: *');
-      header('Access-Control-Allow-Headers: content-type, authorization'); header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS'); header('X-AAlerts-Bron: eigen');
+      header('Access-Control-Allow-Headers: content-type, authorization, x-aalerts-token'); header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS'); header('X-AAlerts-Bron: eigen');
       echo $t; exit;
     }
     if($method==='GET'&&$path==='/v1/status')aaReply(200,aaStatusOverzicht(),['Cache-Control'=>'public, max-age=30']);
