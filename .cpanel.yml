@@ -1,0 +1,8 @@
+---
+# cPanel Git Version Control: "Deploy HEAD Commit" copies web/ into the document root of api.a-alerts.nl.
+# Files that are not in git (docs-auth.local.php, aalerts-private/) are left alone: cp only overwrites.
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/dotenter/api.a-alerts.nl
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R web/. $DEPLOYPATH/
