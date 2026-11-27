@@ -1,5 +1,12 @@
 [
   {
+    "id": "2.0.4",
+    "title": "Beveiligde verbinding",
+    "version": "2.0.4",
+    "release_date": "2026-11-27T00:00:00Z",
+    "content": "<ul><li>De verbinding met de A-Alerts-server is beveiligd met een eigen toegangssleutel, zodat alleen de app en de website de meldingen kunnen ophalen</li></ul>"
+  },
+  {
     "id": "2.0.3",
     "title": "Afkortingen, statistieken en delen als afbeelding",
     "version": "2.0.3",
