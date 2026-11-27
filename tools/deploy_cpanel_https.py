@@ -44,3 +44,4 @@ for path in files:
  api(BASE+"/Fileman/upload_files",payload,"multipart/form-data; boundary="+boundary)
  print("Uploaded:",str(rel))
 print("Deployment: all API files submitted via HTTPS cPanel UAPI")
+# retry
