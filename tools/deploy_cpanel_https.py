@@ -9,7 +9,7 @@ if not ROOT.is_dir():raise SystemExit("missing web directory")
 BASE="https://cpanel04.zxcs.nl:2083/execute"
 AUTH=f"cpanel {USER}:{TOKEN}"
 def api(url,body=None,ctype=None):
- hdr={"Authorization":AUTH,"Accept":"application/json"}
+ hdr={"Authorization":AUTH,"Accept":"application/json","User-Agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
  if ctype:hdr["Content-Type"]=ctype
  req=urllib.request.Request(url,headers=hdr,data=body,method="POST" if body else "GET")
  try:
