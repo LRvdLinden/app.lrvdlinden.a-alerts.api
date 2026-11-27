@@ -6,7 +6,7 @@ require_once __DIR__.'/bootstrap-db.php';
 require __DIR__.'/normalize.php';
 set_time_limit(180);
 $group=$argv[1]??'all';
-if(!in_array($group,['all','p2000','alerts','news','air','traffic','reference','worker'],true)){
+if(!in_array($group,['all','p2000','alerts','news','air','traffic'],true)){
   fwrite(STDERR,"UNKNOWN_COLLECTOR_GROUP\n");exit(2);
 }
 function aaKvGetSafe(string $k): ?string { try{ require_once __DIR__.'/aa/base.php'; return aaKvGet($k);}catch(Throwable){return null;} }
@@ -15,8 +15,7 @@ function groupAllows(string $source): bool {
   if($group==='all')return true;
   $map=['p2000.page'=>'p2000','nlalert'=>'alerts','burgernet'=>'alerts','kind'=>'alerts','knmi'=>'alerts',
     'ndw'=>'traffic','adsb.lol'=>'air','politie'=>'news','112nieuws'=>'news'];
-  if(str_starts_with($source,'worker.'))return $group==='worker';
-  return ($map[$source]??(str_starts_with($source,'reference_')?'reference':''))===$group;
+  return ($map[$source]??'')===$group;
 }
 $lock=fopen(sys_get_temp_dir().'/aalerts-api-private-'.substr(hash('sha256',__DIR__),0,16).'.lock','c');
 if(!$lock||!flock($lock,LOCK_EX|LOCK_NB))exit(0);
@@ -156,70 +155,4 @@ try{
  if(setting('ADSB_LOL_API_KEY')!=='')runCollector($db,'adsb.lol','helikopters',fn()=>normalizeAircraft(entries(sourceJson('https://api.adsb.lol/v2/point/52.2112/5.9699/125',setting('ADSB_LOL_API_KEY')))));
  runCollector($db,'politie','nieuws',fn()=>newsFromPolice());
  runCollector($db,'112nieuws','nieuws',fn()=>newsFrom112());
- // Mirror of the production Worker (workers.dev): everything it publishes is stored here too, read-only through its
- // public GET routes, so nothing changes on the Worker and the personal P2000 key is never used a second time.
- // Lists every minute, slow data every 5 minutes, fixed data once an hour: about 7,000 requests a day, within the free plan.
- if($group==='worker'){
-   $worker=rtrim(setting('REFERENCE_WORKER_URL'),'/');
-   if($worker==='')throw new RuntimeException('worker_url_missing');
-   $minute=(int)gmdate('i');
-   $snap=$db->prepare('INSERT INTO api_kv(key_name,value_json) VALUES (?,?) ON DUPLICATE KEY UPDATE value_json=VALUES(value_json)');
-   // One GET on the Worker; the whole answer is kept as snapshot "worker:<route>" (exact response for the API).
-   $get=function(string $route)use($worker,$snap):array{
-     $d=sourceJson($worker.$route);
-     $snap->execute(['worker:'.explode('?',$route)[0],json_encode(['opgehaald'=>gmdate('c'),'route'=>$route,'data'=>$d],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE)]);
-     return $d;
-   };
-   $list=static function(array $d,array $keys):array{
-     if(array_is_list($d))return $d;
-     $out=[];foreach($keys as $k)if(isset($d[$k])&&is_array($d[$k])&&array_is_list($d[$k]))$out=array_merge($out,$d[$k]);
-     return $out;
-   };
-   runCollector($db,'worker.meldingen','p2000',fn()=>$list($get('/v1/meldingen?limit=100'),['data','meldingen']));
-   runCollector($db,'worker.waarschuwingen','waarschuwingen',fn()=>$list($get('/v1/waarschuwingen?days=30&kind=1&vnog=1'),['data','waarschuwingen']));
-   runCollector($db,'worker.nieuws','nieuws',fn()=>$list($get('/v1/nieuws?limit=100'),['data','nieuws','items']));
-   runCollector($db,'worker.helikopters','helikopters',fn()=>$list($get('/v1/helikopters'),['helikopters']));
-   // History: one older page per minute (meldingen 500, nieuws 100) via "before", until the Worker has nothing older.
-   // The cursor only moves back in time, so a page can never be read twice in a loop.
-   $kvGet=$db->prepare('SELECT value_json FROM api_kv WHERE key_name=?');
-   foreach([['meldingen',500,'datum_tijd','p2000'],['nieuws',100,'at','nieuws']] as [$naam,$per,$veld,$soort]){
-     $key='worker:archief:'.$naam;$kvGet->execute([$key]);$c=json_decode((string)($kvGet->fetchColumn()?:'null'),true);
-     if(is_array($c)&&!empty($c['klaar']))continue;
-     $before=is_array($c)?(string)($c['before']??''):'';
-     runCollector($db,'worker.archief.'.$naam,$soort,function()use($worker,$naam,$per,$veld,$before,$key,$snap){
-       $d=sourceJson($worker.'/v1/'.$naam.'?limit='.$per.($before!==''?'&before='.rawurlencode($before):''));
-       $items=array_is_list($d)?$d:[];
-       $oudste=null;foreach($items as $x){$t=is_array($x)?strtotime((string)($x[$veld]??'')):false;if($t!==false&&($oudste===null||$t<$oudste))$oudste=$t;}
-       $klaar=!$items||$oudste===null||($before!==''&&$oudste>=strtotime($before));
-       $snap->execute([$key,json_encode($klaar?['klaar'=>true,'tot'=>$before]:['before'=>gmdate('Y-m-d\TH:i:s\Z',$oudste)])]);
-       return $items;
-     });
-   }
-   if($minute%5===0){
-     runCollector($db,'worker.lucht','lucht',fn()=>$list($get('/v1/lucht'),['toestellen']));
-     runCollector($db,'worker.verkeer','verkeer',fn()=>$list($get('/v1/verkeer'),['items','gepland','flitsers']));
-     runCollector($db,'worker.status','snapshot',function()use($get){foreach(['/v1/status','/v1/helikopters/status','/v1/radar'] as $r)$get($r);return [];});
-   }
-   // History from before the own intake began: copied once into the engine's own tables.
-   try{ require_once __DIR__.'/aa/import.php'; aaEnsureSchema($db); $i=aaImportUitSpiegel(); if($i)echo "import meldingen=$i\n"; }catch(Throwable $e){ error_log('[aa import] '.$e->getMessage()); }
-   if($minute===7){
-     runCollector($db,'worker.vast','snapshot',function()use($get){foreach(['/v1/locaties','/v1/app','/v1/veiligheidsregio','/v1/changelog'] as $r)$get($r);return [];});
-   }
- }
- // Read-only reference snapshots from the existing Cloudflare Worker.
- // Rate-limited to one round every 15 minutes; no writes to Worker or Cloudflare.
- if($group==='reference'||($group==='all'&&(int)(floor(time()/300)%3)===0)){
-   $worker=rtrim(setting('REFERENCE_WORKER_URL'),'/');
-   if($worker!==''){
-     foreach(['meldingen','waarschuwingen','nieuws','verkeer','helikopters'] as $endpoint){
-       runCollector($db,'reference_'.$endpoint,'reference_'.$endpoint,function()use($worker,$endpoint){
-         $d=sourceJson($worker.'/v1/'.$endpoint.($endpoint==='meldingen'||$endpoint==='nieuws'?'?limit=100':''));
-         if(array_is_list($d))return $d;
-         foreach(['data','meldingen','items','helikopters','waarschuwingen'] as $k)
-           if(isset($d[$k])&&is_array($d[$k])&&array_is_list($d[$k]))return $d[$k];
-         throw new RuntimeException('reference_shape_unverified');
-       });
-     }
-   }
- }
 }catch(Throwable $e){error_log('[AAlerts bootstrap collector] '.get_class($e));exit(1);}

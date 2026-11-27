@@ -47,37 +47,6 @@ function compatRecentAircraft(PDO $db,string $kind):array {
  }
  return $items;
 }
-/**
- * Temporary bridge while the own collectors are being made complete: the exact last answer of the production Worker,
- * kept by the mirror collector (collect.php worker). Only used while it is fresh and WORKER_SPIEGEL is not "0"; without
- * it every route answers from the own data, so api.a-alerts.nl keeps working on its own when the Worker is gone.
- */
-function compatMirror(PDO $db,string $route):mixed{
- if(setting('WORKER_SPIEGEL')==='0')return null;
- $q=$db->prepare('SELECT value_json,TIMESTAMPDIFF(SECOND,updated_at,CURRENT_TIMESTAMP(3)) AS age FROM api_kv WHERE key_name=?');
- $q->execute(['worker:/v1/'.$route]);$row=$q->fetch();
- if(!$row)return null;
- $max=in_array($route,['meldingen','waarschuwingen','nieuws','helikopters'],true)?300:(in_array($route,['locaties','app','veiligheidsregio','changelog'],true)?10800:1800);
- if((int)$row['age']>$max)return null;
- $x=json_decode((string)$row['value_json'],true);
- return is_array($x)&&array_key_exists('data',$x)?$x['data']:null;
-}
-function compatMirrorRoute(PDO $db,string $route):void{
- $plain=['meldingen','waarschuwingen','nieuws','helikopters','lucht','verkeer','status','helikopters/status','radar','locaties','app','veiligheidsregio','changelog'];
- if(!in_array($route,$plain,true))return;
- if($route==='meldingen'&&(($_GET['before']??'')!==''||(int)($_GET['limit']??100)>100))return;
- if($route==='nieuws'&&(($_GET['before']??'')!==''||($_GET['soort']??'')!==''))return;
- $d=compatMirror($db,$route);
- if(!is_array($d))return;
- if($route==='meldingen'&&array_is_list($d))$d=array_slice($d,0,min(100,max(1,(int)($_GET['limit']??100))));
- if($route==='nieuws'&&array_is_list($d)&&isset($_GET['limit']))$d=array_slice($d,0,max(1,(int)$_GET['limit']));
- // The mirror asks the Worker for everything; give each caller what it asked for, as the Worker does.
- if($route==='waarschuwingen'&&array_is_list($d))$d=array_values(array_filter($d,static fn($w)=>is_array($w)
-   &&(($_GET['kind']??'')==='1'||!in_array($w['bron']??'',['amber','vermistkind'],true))
-   &&(($_GET['vnog']??'')==='1'||($w['bron']??'')!=='vnog')));
- header('X-AAlerts-Bron: spiegel');
- privateReply(200,$d);
-}
 function compatMeldingAPI(array $m):array{
  $at=$m['datum']??null;
  $m['datum_tijd']=is_numeric($at)?gmdate('Y-m-d\\TH:i:s\\Z',(int)floor((float)$at/1000)):(string)($m['datum_tijd']??'');
@@ -95,7 +64,6 @@ function compatRoute(string $path):void {
  try{
   $db=privateDb();
   $route=substr($path,4);
-  if($method==='GET')compatMirrorRoute($db,$route);
   // Worker-compatible list response shapes: raw JSON arrays, not shadow-only envelopes.
   if($route==='meldingen'&&$method==='GET'){
     $limit=min(1000,max(1,(int)($_GET['limit']??300)));

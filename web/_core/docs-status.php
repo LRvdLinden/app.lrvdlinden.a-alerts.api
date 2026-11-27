@@ -94,13 +94,6 @@ function docsLiveState(): array {
     'detail'=>setting('WORKER_SPIEGEL')==='0'?'Klaar: sinds 21-11-2026 draait alles hier, de Worker geeft alleen nog door. De laatste kopie staat in de database.':((!empty($d1['vol_klaar'])?'Volledige kopie klaar: '.docsAgo(docsMsOf($d1['vol_klaar'])).'. ':'Volledige kopie loopt nog. ')
       .'Waarschuwingen elke 5 min, toestellen/nieuws/teksten elke 15 min.'.(!empty($d1['fout'])?' Fout: '.$d1['fout']:''))];
 
-  // --- Worker mirror
-  // The database keeps local times: let it convert them, so the age is right in every time zone.
-  $mAt=(int)(docsScalar($db,"SELECT UNIX_TIMESTAMP(MAX(updated_at))*1000 FROM api_kv WHERE key_name LIKE 'worker:/v1/%'")??0)?:null;
-  $out['bronnen'][]=['id'=>'spiegel','naam'=>'Spiegel van workers.dev (controle)','icoon'=>'/images/website/aalerts-icon-180.png',
-    'staat'=>setting('WORKER_SPIEGEL')==='0'?'uit':($mAt&&$now-$mAt<300000?'overname':($mAt?'fout':'gepland')),'laatst'=>$mAt,
-    'detail'=>'Leest de openbare routes van de Worker om te vergelijken; tijdelijk, uit met WORKER_SPIEGEL=0.'];
-
   $k5=docsMsOf((string)(($d1['klein']??[])[5]??($d1['klein']??[])['5']??'')); $k15=docsMsOf((string)(($d1['klein']??[])[15]??($d1['klein']??[])['15']??''));
   // --- warnings per source: own intake module present, else data from the D1 copy
   // Own intake of warnings and news (aa/bronnen.php): "actief" writes and reports in kv aa_bronnen; "proef" only reads the

@@ -68,7 +68,6 @@ except Exception:raise RuntimeError("Private config directory could not be creat
 settings={
  "DB_HOST":"localhost","DB_NAME":db,"DB_USER":mysql_user,"DB_PASS":pw,
  "READ_TOKEN":read_token,"ADMIN_TOKEN":admin_token,"INSTALL_ENABLED":"1",
- "REFERENCE_WORKER_URL":"https://p2000-apeldoorn-api.lrvdlinden.workers.dev",
  "P2000_PAGE_API_URL":"","VERKEER_URL":"","VERKEER_TOKEN":"",
  "ADSB_LOL_API_KEY":"",
 }

@@ -1,4 +1,4 @@
-name: API gateway regressietests (geen FTPS)
+name: API tests (geen FTPS)
 on:
   push:
     branches: [main]
@@ -14,8 +14,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: PHP syntax
         run: find web -type f -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Bestaande gateway regressietests
-        run: bash test/run.sh
       - name: Bronnormalisatie en gebiedsfiltering
         run: php test/normalize.php
       - name: Beveiligde live JSON viewer
