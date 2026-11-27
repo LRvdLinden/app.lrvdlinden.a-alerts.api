@@ -8,7 +8,7 @@ declare(strict_types=1);
  *   soort w = website (issued by a-alerts.nl/token.php, valid 2 hours; the key never reaches the browser)
  * Settings (aalerts-private):
  *   AALERTS_KEY       the secret. Not set = gate completely off (nothing changes).
- *   TOKEN_VERPLICHT   "1" = no valid token means 401. Otherwise grace for installed apps without a token:
+ *   TOKEN_VERPLICHT   default on (meldingen, waarschuwingen, nieuws, ...): no valid token = 401 "Je hebt geen geldige token"; "0" = grace for installed apps without a token:
  *                     anonymous gets at most 30 items, no paging or filters and a tight rate limit.
  * Always rate limited per IP: with token 600 calls/minute, without 20.
  */
@@ -59,7 +59,10 @@ function aaToegang(string $path): void {
   $token=(string)($_SERVER['HTTP_X_AALERTS_TOKEN']??'');
   $geldig=$token!==''&&aaTokenGeldig($token);
   if(!$geldig){
-    if(setting('TOKEN_VERPLICHT')==='1'){ aaToegangTelt('geen:'.$ip,20)||aaToegangAfwijzen(429,'Te veel verzoeken',60); aaToegangAfwijzen(401,'Token vereist'); }
+    // Enforced by default once a key is set (TOKEN_VERPLICHT=0 switches it off). The aircraft/traffic routes of 112Heli and mv3jet
+    // stay in grace (tight rate limit) until those apps send a token.
+    $streng=setting('TOKEN_VERPLICHT')!=='0'&&!preg_match('#^/v1/(helikopters|lucht|verkeer|adsb|weer)(/|$)#',$path);
+    if($streng){ aaToegangTelt('geen:'.$ip,20)||aaToegangAfwijzen(429,'Te veel verzoeken',60); aaToegangAfwijzen(401,'Je hebt geen geldige token'); }
     if(!aaToegangTelt('anon:'.$ip,20))aaToegangAfwijzen(429,'Te veel verzoeken',60);
     // Grace for apps from before the token: a small piece of the latest data, nothing to page through.
     $_GET['limit']=min((int)($_GET['limit']??30)?:30,30);
