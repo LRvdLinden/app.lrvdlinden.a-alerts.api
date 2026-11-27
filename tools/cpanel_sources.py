@@ -55,3 +55,4 @@ with urllib.request.urlopen(req,context=ssl.create_default_context(),timeout=35)
  result=json.load(resp).get("cpanelresult",{})
 if result.get("event",{}).get("result")!=1:raise RuntimeError("PRIVATE_SOURCES_WRITE_FAILED")
 print("PRIVATE_SOURCES_WRITTEN",",".join(sorted(data)))
+# AALERTS_KEY/TOKEN_VERPLICHT opnieuw uitrollen
